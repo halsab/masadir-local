@@ -2,16 +2,28 @@ import type { IpcResult } from './ipc-result';
 
 export type BookStatus = 'pending' | 'indexing' | 'ready' | 'failed';
 
-export interface BookSummary {
-  id: string;
+export interface LibraryBook {
+  bookId: string;
   fileName: string;
-  status: BookStatus;
+  relativeDirectory?: string;
+  mimeType: string;
+  indexStatus: BookStatus;
+}
+
+export type LibraryStatus =
+  | 'unavailable'
+  | 'empty'
+  | 'ready'
+  | 'reconciling';
+
+export interface LibraryState {
+  status: LibraryStatus;
+  books: LibraryBook[];
 }
 
 export interface AppSnapshot {
   appVersion: string;
-  libraryRoot: string | null;
-  books: BookSummary[];
+  library: LibraryState;
 }
 
 export interface AddBooksResult {
@@ -19,7 +31,8 @@ export interface AddBooksResult {
 }
 
 export interface ChooseRootResult {
-  rootPath: string | null;
+  selected: boolean;
+  library: LibraryState;
 }
 
 export interface SearchBookResult {
@@ -50,7 +63,7 @@ export interface MasadirApi {
   library: {
     addBooks(): Promise<IpcResult<AddBooksResult>>;
     chooseRoot(): Promise<IpcResult<ChooseRootResult>>;
-    listBooks(): Promise<IpcResult<BookSummary[]>>;
+    listBooks(): Promise<IpcResult<LibraryBook[]>>;
     trashBook(bookId: string): Promise<IpcResult<void>>;
     retryIndex(bookId: string): Promise<IpcResult<void>>;
     openFolder(): Promise<IpcResult<void>>;

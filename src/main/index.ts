@@ -6,7 +6,7 @@ import { createMainWindow } from './app/create-main-window';
 import { registerIpcHandlers } from './app/register-ipc-handlers';
 import { createAppPaths, ensureAppPaths } from './platform/app-paths';
 import { DiagnosticsService } from './services/diagnostics-service';
-import { SettingsService, type Settings } from './services/settings-service';
+import { SettingsService } from './services/settings-service';
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 
@@ -22,10 +22,8 @@ app
 
     const diagnostics = new DiagnosticsService(paths.logs);
     const settingsService = new SettingsService(paths.settingsFile);
-    let settings: Settings;
-
     try {
-      settings = await settingsService.load();
+      await settingsService.load();
     } catch (error) {
       await diagnostics.error('settings-load-failed', {
         code: error instanceof AppError ? error.code : ErrorCode.internal,
@@ -35,8 +33,7 @@ app
 
     const getSnapshot = (): AppSnapshot => ({
       appVersion: app.getVersion(),
-      libraryRoot: settings.libraryRoot,
-      books: [],
+      library: { status: 'unavailable', books: [] },
     });
 
     registerIpcHandlers({

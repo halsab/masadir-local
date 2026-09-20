@@ -4,6 +4,7 @@ import path from 'node:path';
 export interface AppPaths {
   root: string;
   settingsFile: string;
+  libraryStateFile: string;
   recollConfig: string;
   recollIndex: string;
   logs: string;
@@ -16,6 +17,7 @@ export const createAppPaths = (userDataPath: string): AppPaths => {
   return {
     root,
     settingsFile: path.join(root, 'settings.json'),
+    libraryStateFile: path.join(root, 'state.json'),
     recollConfig: path.join(root, 'recoll', 'config'),
     recollIndex: path.join(root, 'recoll', 'index'),
     logs: path.join(root, 'logs'),
