@@ -85,7 +85,11 @@ describe('RecollAdapter commands', () => {
       ['-c', '/app/config', '-i', book],
       ['-c', '/app/config'],
     ]);
-    expect(runner.calls.every((call) => call.executable === runtime.recollindexExecutable)).toBe(true);
+    expect(
+      runner.calls.every(
+        (call) => call.executable === runtime.recollindexExecutable,
+      ),
+    ).toBe(true);
     expect(runner.calls.every((call) => call.maxStdoutBytes === 0)).toBe(true);
   });
 
@@ -125,5 +129,88 @@ describe('RecollAdapter commands', () => {
       'safe query',
     ]);
     expect(runner.calls[0].timeoutMs).toBe(30_000);
+  });
+
+  it('requests bounded snippets for the saved result offset', async () => {
+    const runner = new RecordingRunner();
+    runner.stdout = [
+      'Recoll query: query',
+      'Printing at most 0 results from first 7',
+      'application/pdf\t[file:///library/a.pdf]\t[A]\t10\tbytes\t',
+      'SNIPPETS',
+      '3 : matching text',
+      '/SNIPPETS',
+      '',
+    ].join('\n');
+    const adapter = new RecollAdapter({
+      resolver: { resolve: async () => runtime },
+      paths,
+      libraryRoot: '/library',
+      runner,
+    });
+    Object.assign(adapter, { runtime, runtimeInfo: { state: 'ready' } });
+
+    await expect(adapter.searchMatches('safe query', 7, 40)).resolves.toEqual({
+      mimeType: 'application/pdf',
+      url: 'file:///library/a.pdf',
+      snippets: [{ pageNumber: 3, snippet: 'matching text' }],
+    });
+    expect(runner.calls[0].args).toEqual([
+      '-c',
+      '/app/config',
+      '-a',
+      '-n',
+      '7-1',
+      '-A',
+      '-p',
+      '40',
+      'safe query',
+    ]);
+    expect(runner.calls[0].timeoutMs).toBe(30_000);
+  });
+
+  it('cancels only the active search process', async () => {
+    const pending: Array<{
+      options: ProcessRunOptions;
+      resolve: (result: ProcessRunResult) => void;
+    }> = [];
+    const runner: ProcessRunnerPort = {
+      run: (options) =>
+        new Promise((resolve) => {
+          pending.push({ options, resolve });
+        }),
+    };
+    const adapter = new RecollAdapter({
+      resolver: { resolve: async () => runtime },
+      paths,
+      libraryRoot: '/library',
+      runner,
+    });
+    Object.assign(adapter, { runtime, runtimeInfo: { state: 'ready' } });
+
+    const indexing = adapter.indexFile('/library/a.pdf');
+    const searching = adapter.searchBooks('query', 0);
+    await new Promise((resolve) => setImmediate(resolve));
+    adapter.cancelSearch();
+
+    expect(pending[0].options.signal?.aborted).toBe(false);
+    expect(pending[1].options.signal?.aborted).toBe(true);
+    pending[0].resolve({
+      exitCode: 0,
+      stdout: '',
+      stderrTail: '',
+      stdoutTruncated: false,
+      stderrTruncated: false,
+    });
+    pending[1].resolve({
+      exitCode: 0,
+      stdout: 'Recoll query: query\n0 results\n',
+      stderrTail: '',
+      stdoutTruncated: false,
+      stderrTruncated: false,
+    });
+
+    await expect(indexing).resolves.toBeUndefined();
+    await expect(searching).resolves.toEqual([]);
   });
 });

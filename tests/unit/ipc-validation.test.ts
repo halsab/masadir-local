@@ -32,8 +32,10 @@ describe('IPC argument validation', () => {
   });
 
   it('limits match count', () => {
-    expect(parseSearchMatchesArgs(['book-id', 500])).toEqual(['book-id', 500]);
-    expectInvalidArguments(() => parseSearchMatchesArgs(['book-id', 501]));
+    expect(parseSearchMatchesArgs(['book-id', 20])).toEqual(['book-id', 20]);
+    expect(parseSearchMatchesArgs(['book-id', 200])).toEqual(['book-id', 200]);
+    expectInvalidArguments(() => parseSearchMatchesArgs(['book-id', 21]));
+    expectInvalidArguments(() => parseSearchMatchesArgs(['book-id', 220]));
   });
 
   it('accepts only positive optional document pages', () => {

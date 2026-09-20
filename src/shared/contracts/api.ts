@@ -10,11 +10,7 @@ export interface LibraryBook {
   indexStatus: BookStatus;
 }
 
-export type LibraryStatus =
-  | 'unavailable'
-  | 'empty'
-  | 'ready'
-  | 'reconciling';
+export type LibraryStatus = 'unavailable' | 'empty' | 'ready' | 'reconciling';
 
 export interface LibraryState {
   status: LibraryStatus;
@@ -48,9 +44,10 @@ export interface SearchBooksPage {
   items: BookSearchResult[];
 }
 
-export interface SearchMatch {
-  pageNumber: number | null;
+export interface BookMatch {
+  pageNumber?: number;
   snippet: string;
+  matchRanges: MatchRange[];
 }
 
 export interface MatchRange {
@@ -83,7 +80,7 @@ export interface MasadirApi {
     searchMatches(
       bookId: string,
       limit: number,
-    ): Promise<IpcResult<SearchMatch[]>>;
+    ): Promise<IpcResult<BookMatch[]>>;
     cancel(): Promise<IpcResult<void>>;
   };
   document: {

@@ -65,10 +65,11 @@ export const parseSearchMatchesArgs = (
   args: unknown[],
 ): [bookId: string, limit: number] => {
   assertArgumentCount(args, 2);
-  return [
-    parseNonEmptyString(args[0], 256),
-    parsePositiveInteger(args[1], 500),
-  ];
+  const limit = parsePositiveInteger(args[1], 200);
+  if (limit % 20 !== 0) {
+    return invalidArguments();
+  }
+  return [parseNonEmptyString(args[0], 256), limit];
 };
 
 export const parseDocumentOpenArgs = (

@@ -5,7 +5,7 @@ export const normalizeQuery = (query: string): string =>
     query
       .trim()
       .replace(/\p{Cc}/gu, '')
-      .replace(/[\*?\[\]"]/gu, ' ')
+      .replace(/[*?[\]"]/gu, ' ')
       .replace(/\s+/gu, ' ')
       .trim(),
   )

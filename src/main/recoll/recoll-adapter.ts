@@ -3,8 +3,16 @@ import path from 'node:path';
 
 import { AppError, ErrorCode } from '../../shared/contracts';
 import type { AppPaths } from '../platform/app-paths';
-import { ProcessRunError, ProcessRunner, type ProcessRunnerPort } from './process-runner';
-import { parseRecollFieldOutput } from './recoll-output-parser';
+import {
+  ProcessRunError,
+  ProcessRunner,
+  type ProcessRunnerPort,
+} from './process-runner';
+import {
+  parseRecollFieldOutput,
+  parseRecollSnippetOutput,
+  type ParsedRecollSnippet,
+} from './recoll-output-parser';
 import { writeRecollConfig } from './recoll-config';
 import type { RecollRuntime, RuntimeResolver } from './runtime-resolver';
 
@@ -40,7 +48,15 @@ export interface RecollBookResult {
   url: string;
 }
 
-const createRuntimeEnvironment = (runtime: RecollRuntime): NodeJS.ProcessEnv => {
+export interface RecollMatchResult {
+  mimeType: string;
+  snippets: ParsedRecollSnippet[];
+  url: string;
+}
+
+const createRuntimeEnvironment = (
+  runtime: RecollRuntime,
+): NodeJS.ProcessEnv => {
   const inheritedKeys = [
     'LANG',
     'LC_ALL',
@@ -58,9 +74,10 @@ const createRuntimeEnvironment = (runtime: RecollRuntime): NodeJS.ProcessEnv => 
       env[key] = process.env[key];
     }
   }
-  env.PATH = [path.dirname(runtime.recollindexExecutable), ...runtime.helperDirectories].join(
-    path.delimiter,
-  );
+  env.PATH = [
+    path.dirname(runtime.recollindexExecutable),
+    ...runtime.helperDirectories,
+  ].join(path.delimiter);
   return env;
 };
 
@@ -79,9 +96,27 @@ const mapProcessError = (error: unknown): AppError => {
   );
 };
 
+const mapSearchProcessError = (error: unknown): AppError => {
+  if (error instanceof ProcessRunError && error.kind === 'spawn-failed') {
+    return new AppError(
+      ErrorCode.recollRuntimeMissing,
+      'Bundled Recoll runtime недоступен.',
+      { cause: error },
+    );
+  }
+  return new AppError(
+    ErrorCode.recollProcessFailed,
+    'Не удалось выполнить поиск.',
+    {
+      cause: error,
+    },
+  );
+};
+
 export class RecollAdapter {
   private readonly runner: ProcessRunnerPort;
   private readonly activeProcesses = new Set<AbortController>();
+  private activeSearchController: AbortController | null = null;
   private runtime: RecollRuntime | null = null;
   private runtimeInfo: RuntimeInfo = { state: 'booting' };
 
@@ -99,6 +134,10 @@ export class RecollAdapter {
     for (const controller of this.activeProcesses) {
       controller.abort();
     }
+  }
+
+  cancelSearch(): void {
+    this.activeSearchController?.abort();
   }
 
   getRuntimeInfo(): RuntimeInfo {
@@ -152,7 +191,9 @@ export class RecollAdapter {
           this.options.paths.recollConfig,
           this.options.paths.recollIndex,
           this.options.paths.runtimeTemp,
-        ].map((directory) => access(directory, constants.R_OK | constants.W_OK)),
+        ].map((directory) =>
+          access(directory, constants.R_OK | constants.W_OK),
+        ),
       );
       await writeRecollConfig(this.options.paths.recollConfig, {
         libraryRoot: this.options.libraryRoot,
@@ -163,7 +204,10 @@ export class RecollAdapter {
     } catch (error) {
       this.runtimeInfo = {
         ...baseInfo,
-        state: (error as NodeJS.ErrnoException).code === 'ENOENT' ? 'missing' : 'incompatible',
+        state:
+          (error as NodeJS.ErrnoException).code === 'ENOENT'
+            ? 'missing'
+            : 'incompatible',
       };
       return this.getRuntimeInfo();
     }
@@ -203,11 +247,21 @@ export class RecollAdapter {
   }
 
   async indexFile(absolutePath: string): Promise<void> {
-    await this.runIndexer(['-c', this.options.paths.recollConfig, '-i', absolutePath]);
+    await this.runIndexer([
+      '-c',
+      this.options.paths.recollConfig,
+      '-i',
+      absolutePath,
+    ]);
   }
 
   async removeFile(absolutePath: string): Promise<void> {
-    await this.runIndexer(['-c', this.options.paths.recollConfig, '-e', absolutePath]);
+    await this.runIndexer([
+      '-c',
+      this.options.paths.recollConfig,
+      '-e',
+      absolutePath,
+    ]);
   }
 
   async updateFile(absolutePath: string): Promise<void> {
@@ -225,7 +279,7 @@ export class RecollAdapter {
   ): Promise<RecollBookResult[]> {
     const runtime = await this.requireRuntime();
     try {
-      const result = await this.runProcess({
+      const result = await this.runSearchProcess({
         executable: runtime.recollqExecutable,
         args: [
           '-c',
@@ -262,12 +316,49 @@ export class RecollAdapter {
       if (error instanceof AppError) {
         throw error;
       }
-      throw mapProcessError(error);
+      throw mapSearchProcessError(error);
     }
   }
 
-  async searchMatches(): Promise<never> {
-    throw new AppError(ErrorCode.notImplemented, 'Поиск будет реализован на этапе D.');
+  async searchMatches(
+    normalizedQuery: string,
+    resultOffset: number,
+    limit: number,
+  ): Promise<RecollMatchResult> {
+    const runtime = await this.requireRuntime();
+    try {
+      const result = await this.runSearchProcess({
+        executable: runtime.recollqExecutable,
+        args: [
+          '-c',
+          this.options.paths.recollConfig,
+          '-a',
+          '-n',
+          `${resultOffset}-1`,
+          '-A',
+          '-p',
+          String(limit),
+          normalizedQuery,
+        ],
+        cwd: runtime.root,
+        env: createRuntimeEnvironment(runtime),
+        timeoutMs: SEARCH_TIMEOUT_MS,
+        maxStdoutBytes: 1024 * 1024,
+        maxStderrBytes: 32 * 1024,
+      });
+      if (result.stdoutTruncated) {
+        throw new AppError(
+          ErrorCode.recollOutputInvalid,
+          'Recoll вернул слишком большой результат.',
+        );
+      }
+      return parseRecollSnippetOutput(result.stdout);
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw mapSearchProcessError(error);
+    }
   }
 
   private async requireRuntime(): Promise<RecollRuntime> {
@@ -310,6 +401,23 @@ export class RecollAdapter {
       return await this.runner.run({ ...options, signal: controller.signal });
     } finally {
       this.activeProcesses.delete(controller);
+    }
+  }
+
+  private async runSearchProcess(
+    options: Omit<Parameters<ProcessRunnerPort['run']>[0], 'signal'>,
+  ) {
+    this.cancelSearch();
+    const controller = new AbortController();
+    this.activeSearchController = controller;
+    this.activeProcesses.add(controller);
+    try {
+      return await this.runner.run({ ...options, signal: controller.signal });
+    } finally {
+      this.activeProcesses.delete(controller);
+      if (this.activeSearchController === controller) {
+        this.activeSearchController = null;
+      }
     }
   }
 }

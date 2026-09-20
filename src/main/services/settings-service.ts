@@ -2,16 +2,18 @@ import { readFile, rename, unlink, writeFile } from 'node:fs/promises';
 
 import { AppError, ErrorCode } from '../../shared/contracts';
 
-const CURRENT_SCHEMA_VERSION = 1 as const;
+const CURRENT_SCHEMA_VERSION = 2 as const;
 
 export interface Settings {
   schemaVersion: typeof CURRENT_SCHEMA_VERSION;
   libraryRoot: string | null;
+  recentQueries: string[];
 }
 
 export const defaultSettings = (): Settings => ({
   schemaVersion: CURRENT_SCHEMA_VERSION,
   libraryRoot: null,
+  recentQueries: [],
 });
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -28,7 +30,11 @@ export const migrateSettings = (value: unknown): Settings => {
   const schemaVersion = value.schemaVersion ?? 0;
   const libraryRoot = value.libraryRoot;
 
-  if (schemaVersion !== 0 && schemaVersion !== CURRENT_SCHEMA_VERSION) {
+  if (
+    schemaVersion !== 0 &&
+    schemaVersion !== 1 &&
+    schemaVersion !== CURRENT_SCHEMA_VERSION
+  ) {
     throw new AppError(
       ErrorCode.settingsInvalid,
       'Версия файла настроек не поддерживается.',
@@ -46,9 +52,28 @@ export const migrateSettings = (value: unknown): Settings => {
     );
   }
 
+  const recentQueries = value.recentQueries ?? [];
+  if (
+    !Array.isArray(recentQueries) ||
+    recentQueries.length > 3 ||
+    recentQueries.some(
+      (query) =>
+        typeof query !== 'string' ||
+        query.length === 0 ||
+        Array.from(query).length > 256,
+    ) ||
+    new Set(recentQueries).size !== recentQueries.length
+  ) {
+    throw new AppError(
+      ErrorCode.settingsInvalid,
+      'История поиска в настройках имеет неверный формат.',
+    );
+  }
+
   return {
     schemaVersion: CURRENT_SCHEMA_VERSION,
     libraryRoot: libraryRoot ?? null,
+    recentQueries: [...recentQueries],
   };
 };
 

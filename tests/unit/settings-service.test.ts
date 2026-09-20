@@ -35,7 +35,7 @@ describe('SettingsService', () => {
 
     await expect(service.load()).resolves.toEqual(defaultSettings());
     await expect(readFile(file, 'utf8')).resolves.toContain(
-      '"schemaVersion": 1',
+      '"schemaVersion": 2',
     );
   });
 
@@ -45,8 +45,27 @@ describe('SettingsService', () => {
 
     const settings = await new SettingsService(file).load();
 
-    expect(settings).toEqual({ schemaVersion: 1, libraryRoot: '/books' });
+    expect(settings).toEqual({
+      schemaVersion: 2,
+      libraryRoot: '/books',
+      recentQueries: [],
+    });
     expect(JSON.parse(await readFile(file, 'utf8'))).toEqual(settings);
+  });
+
+  it('migrates stage A-C settings with an empty recent query history', async () => {
+    const { file } = await createSettingsFile();
+    await writeFile(
+      file,
+      JSON.stringify({ schemaVersion: 1, libraryRoot: '/books' }),
+      'utf8',
+    );
+
+    await expect(new SettingsService(file).load()).resolves.toEqual({
+      schemaVersion: 2,
+      libraryRoot: '/books',
+      recentQueries: [],
+    });
   });
 
   it('atomically replaces settings without leaving a temporary file', async () => {
@@ -58,13 +77,15 @@ describe('SettingsService', () => {
     );
 
     await new SettingsService(file).save({
-      schemaVersion: 1,
+      schemaVersion: 2,
       libraryRoot: '/new-library',
+      recentQueries: ['first'],
     });
 
     expect(JSON.parse(await readFile(file, 'utf8'))).toEqual({
-      schemaVersion: 1,
+      schemaVersion: 2,
       libraryRoot: '/new-library',
+      recentQueries: ['first'],
     });
     expect(await readdir(directory)).toEqual(['settings.json']);
   });

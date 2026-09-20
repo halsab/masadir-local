@@ -12,6 +12,7 @@ import {
 } from '../../shared/contracts';
 import type { DiagnosticsService } from '../services/diagnostics-service';
 import type { LibraryService } from '../library/library-service';
+import type { SearchService } from '../search/search-service';
 import {
   parseBookIdArgs,
   parseClipboardWriteArgs,
@@ -27,6 +28,7 @@ interface RegisterIpcHandlersOptions {
   getSnapshot: () => AppSnapshot;
   library: LibraryService;
   rendererUrl: string;
+  search: SearchService;
 }
 
 type ArgsParser<TArgs extends unknown[]> = (args: unknown[]) => TArgs;
@@ -41,6 +43,7 @@ export const registerIpcHandlers = ({
   getSnapshot,
   library,
   rendererUrl,
+  search,
 }: RegisterIpcHandlersOptions): void => {
   const handle = <TArgs extends unknown[], TResult>(
     channel: InvokeChannel,
@@ -80,9 +83,13 @@ export const registerIpcHandlers = ({
     library.retryIndex(bookId),
   );
   handle(IpcChannel.libraryOpenFolder, parseNoArgs, () => library.openFolder());
-  handle(IpcChannel.searchBooks, parseSearchBooksArgs, notImplemented);
-  handle(IpcChannel.searchMatches, parseSearchMatchesArgs, notImplemented);
-  handle(IpcChannel.searchCancel, parseNoArgs, notImplemented);
+  handle(IpcChannel.searchBooks, parseSearchBooksArgs, (query, page) =>
+    search.searchBooks(query, page),
+  );
+  handle(IpcChannel.searchMatches, parseSearchMatchesArgs, (bookId, limit) =>
+    search.searchMatches(bookId, limit),
+  );
+  handle(IpcChannel.searchCancel, parseNoArgs, () => search.cancel());
   handle(IpcChannel.documentOpen, parseDocumentOpenArgs, notImplemented);
   handle(IpcChannel.clipboardWriteText, parseClipboardWriteArgs, (text) => {
     clipboard.writeText(text);

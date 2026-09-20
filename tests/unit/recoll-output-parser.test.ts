@@ -35,7 +35,9 @@ describe('Recoll -F output parser', () => {
   it('rejects malformed base64, wrong field count and truncated output', () => {
     expectInvalid(() => parseRecollFieldOutput(`${header}%%% x y z \n`, 4, 0));
     expectInvalid(() => parseRecollFieldOutput(`${header}YQ== Yg== \n`, 4, 0));
-    expectInvalid(() => parseRecollFieldOutput(`${header}YQ== Yg== Yw== ZA== `, 4, 0));
+    expectInvalid(() =>
+      parseRecollFieldOutput(`${header}YQ== Yg== Yw== ZA== `, 4, 0),
+    );
   });
 });
 

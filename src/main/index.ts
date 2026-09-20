@@ -17,6 +17,7 @@ import { RecollAdapter } from './recoll/recoll-adapter';
 import { RuntimeResolver } from './recoll/runtime-resolver';
 import { DiagnosticsService } from './services/diagnostics-service';
 import { SettingsService, type Settings } from './services/settings-service';
+import { SearchService } from './search/search-service';
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 
@@ -108,6 +109,10 @@ app
       },
       stateStore,
     });
+    const search = new SearchService(recollAdapter, indexService, library, {
+      settings,
+      settingsService,
+    });
 
     try {
       const rootPath = initialRoot;
@@ -144,6 +149,7 @@ app
       getSnapshot,
       library,
       rendererUrl: MAIN_WINDOW_WEBPACK_ENTRY,
+      search,
     });
 
     await diagnostics.info('app-started');

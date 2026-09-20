@@ -34,7 +34,7 @@ const parseOutputLines = (stdout: string): string[] => {
     lines.length < 2 ||
     !lines[0].startsWith('Recoll query: ') ||
     !(
-      /^\d+ results(?: \(printing  \d+ max\):)?$/u.test(lines[1]) ||
+      /^\d+ results(?: \(printing {2}\d+ max\):)?$/u.test(lines[1]) ||
       /^Printing at most -?\d+ results from first \d+$/u.test(lines[1])
     )
   ) {
@@ -103,7 +103,9 @@ const decodePlainText = (value: string): string =>
     }
   });
 
-export const parseRecollSnippetOutput = (stdout: string): ParsedRecollSnippets => {
+export const parseRecollSnippetOutput = (
+  stdout: string,
+): ParsedRecollSnippets => {
   const lines = parseOutputLines(stdout);
   if (lines.length < 3) {
     return invalidOutput();
@@ -176,7 +178,9 @@ export const findMatchRanges = (
     }
   }
 
-  ranges.sort((left, right) => left.start - right.start || left.end - right.end);
+  ranges.sort(
+    (left, right) => left.start - right.start || left.end - right.end,
+  );
   const merged: MatchRange[] = [];
   for (const range of ranges) {
     const previous = merged.at(-1);
