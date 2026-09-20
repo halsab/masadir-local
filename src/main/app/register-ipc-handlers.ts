@@ -1,8 +1,6 @@
 import { clipboard, ipcMain, type IpcMainInvokeEvent } from 'electron';
 
 import {
-  AppError,
-  ErrorCode,
   IpcChannel,
   type AppSnapshot,
   type InvokeChannel,
@@ -11,6 +9,7 @@ import {
   toIpcResult,
 } from '../../shared/contracts';
 import type { DiagnosticsService } from '../services/diagnostics-service';
+import type { DocumentService } from '../document/document-service';
 import type { LibraryService } from '../library/library-service';
 import type { SearchService } from '../search/search-service';
 import {
@@ -25,6 +24,7 @@ import { assertTrustedSender } from './trusted-sender';
 
 interface RegisterIpcHandlersOptions {
   diagnostics: DiagnosticsService;
+  document: DocumentService;
   getSnapshot: () => AppSnapshot;
   library: LibraryService;
   rendererUrl: string;
@@ -33,13 +33,9 @@ interface RegisterIpcHandlersOptions {
 
 type ArgsParser<TArgs extends unknown[]> = (args: unknown[]) => TArgs;
 
-const notImplemented = (..._args: unknown[]): never => {
-  void _args;
-  throw new AppError(ErrorCode.notImplemented, 'Функция пока недоступна.');
-};
-
 export const registerIpcHandlers = ({
   diagnostics,
+  document,
   getSnapshot,
   library,
   rendererUrl,
@@ -90,7 +86,9 @@ export const registerIpcHandlers = ({
     search.searchMatches(bookId, limit),
   );
   handle(IpcChannel.searchCancel, parseNoArgs, () => search.cancel());
-  handle(IpcChannel.documentOpen, parseDocumentOpenArgs, notImplemented);
+  handle(IpcChannel.documentOpen, parseDocumentOpenArgs, (...args) =>
+    document.open(args[0], args[1]),
+  );
   handle(IpcChannel.clipboardWriteText, parseClipboardWriteArgs, (text) => {
     clipboard.writeText(text);
   });

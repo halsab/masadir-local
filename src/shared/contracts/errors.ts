@@ -5,6 +5,7 @@ export const ErrorCode = {
   settingsInvalid: 'settings_invalid',
   libraryUnavailable: 'library_unavailable',
   bookNotFound: 'book_not_found',
+  documentOpenFailed: 'document_open_failed',
   recollRuntimeMissing: 'recoll_runtime_missing',
   recollRuntimeIncompatible: 'recoll_runtime_incompatible',
   recollProcessFailed: 'recoll_process_failed',

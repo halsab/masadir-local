@@ -7,6 +7,7 @@ import started from 'electron-squirrel-startup';
 import { AppError, ErrorCode, type AppSnapshot } from '../shared/contracts';
 import { createMainWindow } from './app/create-main-window';
 import { registerIpcHandlers } from './app/register-ipc-handlers';
+import { DocumentService } from './document/document-service';
 import { LibraryService } from './library/library-service';
 import { IndexService } from './library/index-service';
 import { LibraryStateStore } from './library/library-state-store';
@@ -113,6 +114,9 @@ app
       settings,
       settingsService,
     });
+    const document = new DocumentService(library, {
+      openPath: (filePath) => shell.openPath(filePath),
+    });
 
     try {
       const rootPath = initialRoot;
@@ -146,6 +150,7 @@ app
 
     registerIpcHandlers({
       diagnostics,
+      document,
       getSnapshot,
       library,
       rendererUrl: MAIN_WINDOW_WEBPACK_ENTRY,

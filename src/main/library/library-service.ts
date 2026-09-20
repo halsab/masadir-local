@@ -89,6 +89,10 @@ export class LibraryService {
     };
   }
 
+  getDocumentCatalog(): { libraryRoot: string; books: StoredBook[] } {
+    return this.getSearchCatalog();
+  }
+
   async chooseRoot(): Promise<ChooseRootResult> {
     const selectedPath = await this.options.dialogs.chooseDirectory();
     if (selectedPath === null) {
