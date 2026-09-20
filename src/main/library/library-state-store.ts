@@ -2,6 +2,7 @@ import { readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { AppError, ErrorCode } from '../../shared/contracts';
+import { getSupportedMimeType } from './library-files';
 import { assertSafeRelativePath } from './path-safety';
 import {
   LIBRARY_STATE_SCHEMA_VERSION,
@@ -36,6 +37,7 @@ const isStoredBook = (value: unknown): value is StoredBook => {
     Number.isFinite(book.mtimeMs) &&
     (book.mtimeMs as number) >= 0 &&
     typeof book.mimeType === 'string' &&
+    getSupportedMimeType(book.relativePath as string) === book.mimeType &&
     INDEX_STATUSES.has(book.indexStatus as string)
   );
 };
@@ -64,7 +66,20 @@ const parseState = (value: unknown): StoredLibraryState | null => {
     ids.add(book.bookId);
   }
 
-  return state as unknown as StoredLibraryState;
+  return {
+    schemaVersion: LIBRARY_STATE_SCHEMA_VERSION,
+    books: state.books.map((value) => {
+      const book = value as StoredBook;
+      return {
+        bookId: book.bookId,
+        relativePath: book.relativePath,
+        size: book.size,
+        mtimeMs: book.mtimeMs,
+        mimeType: book.mimeType,
+        indexStatus: book.indexStatus,
+      };
+    }),
+  };
 };
 
 export class LibraryStateStore {

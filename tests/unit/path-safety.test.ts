@@ -28,6 +28,7 @@ afterEach(async () => {
 describe('library path safety', () => {
   it('rejects traversal and absolute paths', () => {
     expect(() => assertSafeRelativePath('../outside.pdf')).toThrow();
+    expect(() => assertSafeRelativePath('inside/../outside.pdf')).toThrow();
     expect(() => assertSafeRelativePath(path.resolve('/outside.pdf'))).toThrow();
     expect(assertSafeRelativePath('كتب/Book One.PDF')).toBe(
       path.join('كتب', 'Book One.PDF'),

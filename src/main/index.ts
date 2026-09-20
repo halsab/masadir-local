@@ -1,3 +1,6 @@
+import { mkdir } from 'node:fs/promises';
+import path from 'node:path';
+
 import { app, BrowserWindow, dialog, shell } from 'electron';
 import started from 'electron-squirrel-startup';
 
@@ -83,18 +86,24 @@ app
       stateStore,
     });
 
-    if (settings.libraryRoot !== null) {
-      const root = await assertLibraryRootLocation(settings.libraryRoot, [
+    try {
+      const rootPath =
+        settings.libraryRoot ??
+        path.join(app.getPath('documents'), 'Masādir Library');
+      await mkdir(rootPath, { recursive: true });
+      const root = await assertLibraryRootLocation(rootPath, [
         app.getAppPath(),
         app.getPath('userData'),
       ]);
-      const loaded = await stateStore.load();
-      library.setLoadedState(
-        root,
-        loaded.kind === 'valid'
-          ? loaded.state
-          : { schemaVersion: 1, books: [] },
-      );
+      if (settings.libraryRoot !== root) {
+        settings.libraryRoot = root;
+        await settingsService.save(settings);
+      }
+      await library.initializeRoot(root);
+    } catch (error) {
+      await diagnostics.error('library-reconcile-failed', {
+        code: error instanceof AppError ? error.code : ErrorCode.ioError,
+      });
     }
 
     const getSnapshot = (): AppSnapshot => ({

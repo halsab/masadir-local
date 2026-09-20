@@ -21,6 +21,7 @@ import {
 } from '../../shared/contracts';
 import type { Settings, SettingsService } from '../services/settings-service';
 import { findAvailableFileName, getSupportedMimeType } from './library-files';
+import { reconcileLibrary } from './library-reconcile';
 import type { LibraryStateStore } from './library-state-store';
 import {
   emptyStoredLibraryState,
@@ -96,10 +97,7 @@ export class LibraryService {
     };
     await this.options.settingsService.save(settings);
     this.options.settings.libraryRoot = canonicalRoot;
-    this.canonicalRoot = canonicalRoot;
-    this.state = emptyStoredLibraryState();
-    this.status = 'empty';
-    await this.options.stateStore.save(this.state);
+    await this.initializeRoot(canonicalRoot);
 
     return { selected: true, library: this.getState() };
   }
@@ -192,6 +190,20 @@ export class LibraryService {
   setReconciling(canonicalRoot: string): void {
     this.canonicalRoot = canonicalRoot;
     this.status = 'reconciling';
+  }
+
+  async initializeRoot(canonicalRoot: string): Promise<void> {
+    this.setReconciling(canonicalRoot);
+    try {
+      const result = await reconcileLibrary(
+        canonicalRoot,
+        this.options.stateStore,
+      );
+      this.setLoadedState(canonicalRoot, result.state);
+    } catch (error) {
+      this.status = 'unavailable';
+      throw error;
+    }
   }
 
   private requireRoot(): string {

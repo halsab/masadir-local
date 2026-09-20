@@ -7,7 +7,10 @@ const MAX_LOG_SIZE = 5 * 1024 * 1024;
 const LOG_FILE_COUNT = 3;
 
 type DiagnosticEvent =
-  'app-started' | 'ipc-request-failed' | 'settings-load-failed';
+  | 'app-started'
+  | 'ipc-request-failed'
+  | 'library-reconcile-failed'
+  | 'settings-load-failed';
 
 interface DiagnosticFields {
   channel?: InvokeChannel;

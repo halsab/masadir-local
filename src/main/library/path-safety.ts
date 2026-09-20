@@ -20,7 +20,8 @@ export const assertSafeRelativePath = (relativePath: string): string => {
   if (
     relativePath.length === 0 ||
     path.isAbsolute(relativePath) ||
-    relativePath.includes('\0')
+    relativePath.includes('\0') ||
+    relativePath.split(/[\\/]/u).includes('..')
   ) {
     throw new AppError(ErrorCode.invalidArgument, 'Некорректный путь книги.');
   }
@@ -51,7 +52,10 @@ export const assertLibraryRootLocation = async (
       canonicalForbidden = path.resolve(forbiddenRoot);
     }
 
-    if (isInsideOrEqual(canonicalForbidden, canonicalRoot)) {
+    if (
+      isInsideOrEqual(canonicalForbidden, canonicalRoot) ||
+      isInsideOrEqual(canonicalRoot, canonicalForbidden)
+    ) {
       throw new AppError(
         ErrorCode.invalidArgument,
         'Библиотека должна находиться вне каталогов приложения.',
