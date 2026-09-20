@@ -11,6 +11,7 @@ import {
   toIpcResult,
 } from '../../shared/contracts';
 import type { DiagnosticsService } from '../services/diagnostics-service';
+import type { LibraryService } from '../library/library-service';
 import {
   parseBookIdArgs,
   parseClipboardWriteArgs,
@@ -24,6 +25,7 @@ import { assertTrustedSender } from './trusted-sender';
 interface RegisterIpcHandlersOptions {
   diagnostics: DiagnosticsService;
   getSnapshot: () => AppSnapshot;
+  library: LibraryService;
   rendererUrl: string;
 }
 
@@ -37,6 +39,7 @@ const notImplemented = (..._args: unknown[]): never => {
 export const registerIpcHandlers = ({
   diagnostics,
   getSnapshot,
+  library,
   rendererUrl,
 }: RegisterIpcHandlersOptions): void => {
   const handle = <TArgs extends unknown[], TResult>(
@@ -67,12 +70,14 @@ export const registerIpcHandlers = ({
   };
 
   handle(IpcChannel.appGetSnapshot, parseNoArgs, getSnapshot);
-  handle(IpcChannel.libraryAddBooks, parseNoArgs, notImplemented);
-  handle(IpcChannel.libraryChooseRoot, parseNoArgs, notImplemented);
-  handle(IpcChannel.libraryListBooks, parseNoArgs, notImplemented);
-  handle(IpcChannel.libraryTrashBook, parseBookIdArgs, notImplemented);
+  handle(IpcChannel.libraryAddBooks, parseNoArgs, () => library.addBooks());
+  handle(IpcChannel.libraryChooseRoot, parseNoArgs, () => library.chooseRoot());
+  handle(IpcChannel.libraryListBooks, parseNoArgs, () => library.listBooks());
+  handle(IpcChannel.libraryTrashBook, parseBookIdArgs, (bookId) =>
+    library.trashBook(bookId),
+  );
   handle(IpcChannel.libraryRetryIndex, parseBookIdArgs, notImplemented);
-  handle(IpcChannel.libraryOpenFolder, parseNoArgs, notImplemented);
+  handle(IpcChannel.libraryOpenFolder, parseNoArgs, () => library.openFolder());
   handle(IpcChannel.searchBooks, parseSearchBooksArgs, notImplemented);
   handle(IpcChannel.searchMatches, parseSearchMatchesArgs, notImplemented);
   handle(IpcChannel.searchCancel, parseNoArgs, notImplemented);

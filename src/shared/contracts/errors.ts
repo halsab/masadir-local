@@ -3,6 +3,8 @@ export const ErrorCode = {
   notImplemented: 'not_implemented',
   unauthorized: 'unauthorized',
   settingsInvalid: 'settings_invalid',
+  libraryUnavailable: 'library_unavailable',
+  bookNotFound: 'book_not_found',
   ioError: 'io_error',
   internal: 'internal',
 } as const;
