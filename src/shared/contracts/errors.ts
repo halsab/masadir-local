@@ -8,6 +8,7 @@ export const ErrorCode = {
   recollRuntimeMissing: 'recoll_runtime_missing',
   recollRuntimeIncompatible: 'recoll_runtime_incompatible',
   recollProcessFailed: 'recoll_process_failed',
+  recollOutputInvalid: 'rec_output_invalid',
   ioError: 'io_error',
   internal: 'internal',
 } as const;

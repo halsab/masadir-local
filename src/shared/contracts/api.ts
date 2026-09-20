@@ -51,6 +51,11 @@ export interface SearchMatch {
   snippet: string;
 }
 
+export interface MatchRange {
+  start: number;
+  end: number;
+}
+
 export interface BookStatusChangedEvent {
   bookId: string;
   status: BookStatus;
