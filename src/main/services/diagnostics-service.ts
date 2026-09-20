@@ -2,7 +2,7 @@ import { appendFile, mkdir, rename, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 
 import type { ErrorCode, InvokeChannel } from '../../shared/contracts';
-import type { RuntimeState } from '../recoll/recoll-adapter';
+import type { RuntimeState } from '../../shared/contracts';
 
 const MAX_LOG_SIZE = 5 * 1024 * 1024;
 const LOG_FILE_COUNT = 3;

@@ -3,6 +3,7 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 import {
   IpcChannel,
   type BookStatusChangedEvent,
+  type IndexStateChangedEvent,
   type IpcResult,
   type MasadirApi,
 } from '../shared/contracts';
@@ -48,6 +49,16 @@ const api: MasadirApi = {
       ipcRenderer.on(IpcChannel.bookStatusChanged, listener);
       return () =>
         ipcRenderer.removeListener(IpcChannel.bookStatusChanged, listener);
+    },
+    onIndexStateChanged: (callback) => {
+      const listener = (
+        _event: IpcRendererEvent,
+        payload: IndexStateChangedEvent,
+      ): void => callback(payload);
+
+      ipcRenderer.on(IpcChannel.indexStateChanged, listener);
+      return () =>
+        ipcRenderer.removeListener(IpcChannel.indexStateChanged, listener);
     },
   },
 };

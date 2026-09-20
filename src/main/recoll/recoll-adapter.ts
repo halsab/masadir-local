@@ -1,7 +1,11 @@
 import { constants, access, stat } from 'node:fs/promises';
 import path from 'node:path';
 
-import { AppError, ErrorCode } from '../../shared/contracts';
+import {
+  AppError,
+  ErrorCode,
+  type RuntimeState,
+} from '../../shared/contracts';
 import type { AppPaths } from '../platform/app-paths';
 import {
   ProcessRunError,
@@ -15,8 +19,6 @@ import {
 } from './recoll-output-parser';
 import { writeRecollConfig } from './recoll-config';
 import type { RecollRuntime, RuntimeResolver } from './runtime-resolver';
-
-export type RuntimeState = 'booting' | 'ready' | 'missing' | 'incompatible';
 
 export interface RuntimeInfo {
   state: RuntimeState;

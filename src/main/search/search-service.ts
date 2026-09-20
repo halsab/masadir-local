@@ -6,6 +6,7 @@ import {
   ErrorCode,
   type BookMatch,
   type BookSearchResult,
+  type SearchState,
   type SearchBooksPage,
 } from '../../shared/contracts';
 import type { IndexServiceState } from '../library/index-service';
@@ -21,8 +22,6 @@ import { normalizeQuery } from './query-normalizer';
 
 const BOOKS_PER_PAGE = 20;
 const MAX_MATCHES = 200;
-
-export type SearchState = 'idle' | 'running' | 'results' | 'empty' | 'failed';
 
 interface SearchRecollAdapter {
   cancelSearch(): void;

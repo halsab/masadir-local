@@ -12,6 +12,18 @@ export interface LibraryBook {
 
 export type LibraryStatus = 'unavailable' | 'empty' | 'ready' | 'reconciling';
 
+export type RuntimeState = 'booting' | 'ready' | 'missing' | 'incompatible';
+
+export type IndexState =
+  | 'unknown'
+  | 'ready'
+  | 'mutating'
+  | 'needsRecovery'
+  | 'recovering'
+  | 'failed';
+
+export type SearchState = 'idle' | 'running' | 'results' | 'empty' | 'failed';
+
 export interface LibraryState {
   status: LibraryStatus;
   books: LibraryBook[];
@@ -19,7 +31,12 @@ export interface LibraryState {
 
 export interface AppSnapshot {
   appVersion: string;
+  libraryRoot: string | null;
   library: LibraryState;
+  runtimeState: RuntimeState;
+  indexState: IndexState;
+  searchState: SearchState;
+  recentQueries: string[];
 }
 
 export interface AddBooksResult {
@@ -60,6 +77,10 @@ export interface BookStatusChangedEvent {
   status: BookStatus;
 }
 
+export interface IndexStateChangedEvent {
+  state: IndexState;
+}
+
 export interface MasadirApi {
   app: {
     getSnapshot(): Promise<IpcResult<AppSnapshot>>;
@@ -92,6 +113,9 @@ export interface MasadirApi {
   events: {
     onBookStatusChanged(
       callback: (event: BookStatusChangedEvent) => void,
+    ): () => void;
+    onIndexStateChanged(
+      callback: (event: IndexStateChangedEvent) => void,
     ): () => void;
   };
 }

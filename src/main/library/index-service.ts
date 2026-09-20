@@ -1,5 +1,6 @@
 import path from 'node:path';
 
+import type { IndexState } from '../../shared/contracts';
 import type { RuntimeInfo } from '../recoll/recoll-adapter';
 import type { IndexMetadataStore } from '../recoll/index-metadata-store';
 import type { StoredBook, StoredLibraryState } from './library-types';
@@ -11,13 +12,7 @@ export interface IndexChangeSet {
   requiresRecovery: boolean;
 }
 
-export type IndexServiceState =
-  | 'unknown'
-  | 'ready'
-  | 'mutating'
-  | 'needsRecovery'
-  | 'recovering'
-  | 'failed';
+export type IndexServiceState = IndexState;
 
 interface RecollIndexAdapter {
   getRuntimeInfo(): RuntimeInfo;

@@ -145,7 +145,12 @@ app
 
     const getSnapshot = (): AppSnapshot => ({
       appVersion: app.getVersion(),
+      libraryRoot: settings.libraryRoot,
       library: library.getState(),
+      runtimeState: indexService.getRuntimeInfo().state,
+      indexState: indexService.getState(),
+      searchState: search.getState(),
+      recentQueries: [...settings.recentQueries],
     });
 
     registerIpcHandlers({
