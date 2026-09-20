@@ -65,9 +65,10 @@ export const reconcileLibrary = async (
     });
   }
 
-  const removedBookIds = [...previousByPath.values()].map(
-    (book) => book.bookId,
-  );
+  const removedBooks = [...previousByPath.values()].map((book) => ({
+    bookId: book.bookId,
+    relativePath: book.relativePath,
+  }));
   const state: StoredLibraryState = {
     schemaVersion: LIBRARY_STATE_SCHEMA_VERSION,
     books: nextBooks,
@@ -76,7 +77,7 @@ export const reconcileLibrary = async (
     loaded.kind !== 'valid' ||
     addedBookIds.length > 0 ||
     changedBookIds.length > 0 ||
-    removedBookIds.length > 0;
+    removedBooks.length > 0;
 
   if (requiresSave) {
     await stateStore.save(state);
@@ -88,7 +89,7 @@ export const reconcileLibrary = async (
     changes: {
       addedBookIds,
       changedBookIds,
-      removedBookIds,
+      removedBooks,
       requiresRecovery: loaded.kind === 'corrupted',
     },
   };

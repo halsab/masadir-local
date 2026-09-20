@@ -8,9 +8,13 @@ import { AppError, ErrorCode, type AppSnapshot } from '../shared/contracts';
 import { createMainWindow } from './app/create-main-window';
 import { registerIpcHandlers } from './app/register-ipc-handlers';
 import { LibraryService } from './library/library-service';
+import { IndexService } from './library/index-service';
 import { LibraryStateStore } from './library/library-state-store';
 import { assertLibraryRootLocation } from './library/path-safety';
 import { createAppPaths, ensureAppPaths } from './platform/app-paths';
+import { IndexMetadataStore } from './recoll/index-metadata-store';
+import { RecollAdapter } from './recoll/recoll-adapter';
+import { RuntimeResolver } from './recoll/runtime-resolver';
 import { DiagnosticsService } from './services/diagnostics-service';
 import { SettingsService, type Settings } from './services/settings-service';
 
@@ -39,6 +43,24 @@ app
     }
 
     const stateStore = new LibraryStateStore(paths.libraryStateFile);
+    const initialRoot =
+      settings.libraryRoot ??
+      path.join(app.getPath('documents'), 'Masādir Library');
+    const recollAdapter = new RecollAdapter({
+      resolver: new RuntimeResolver({
+        appPath: app.getAppPath(),
+        isPackaged: app.isPackaged,
+        resourcesPath: process.resourcesPath,
+      }),
+      paths,
+      libraryRoot: initialRoot,
+    });
+    const indexService = new IndexService(
+      recollAdapter,
+      stateStore,
+      new IndexMetadataStore(paths.recollIndex),
+      initialRoot,
+    );
     const library = new LibraryService({
       dialogs: {
         chooseDirectory: async () => {
@@ -77,6 +99,7 @@ app
         },
       },
       forbiddenRoots: [app.getAppPath(), app.getPath('userData')],
+      indexService,
       settings,
       settingsService,
       shell: {
@@ -87,9 +110,7 @@ app
     });
 
     try {
-      const rootPath =
-        settings.libraryRoot ??
-        path.join(app.getPath('documents'), 'Masādir Library');
+      const rootPath = initialRoot;
       await mkdir(rootPath, { recursive: true });
       const root = await assertLibraryRootLocation(rootPath, [
         app.getAppPath(),
@@ -105,6 +126,13 @@ app
         code: error instanceof AppError ? error.code : ErrorCode.ioError,
       });
     }
+    const runtimeInfo = indexService.getRuntimeInfo();
+    await diagnostics.info('recoll-preflight', {
+      runtimeState: runtimeInfo.state,
+      runtimeFingerprint: runtimeInfo.runtimeFingerprint,
+      recollVersion: runtimeInfo.recollVersion,
+      indexCompatibilityVersion: runtimeInfo.indexCompatibilityVersion,
+    });
 
     const getSnapshot = (): AppSnapshot => ({
       appVersion: app.getVersion(),
@@ -120,6 +148,8 @@ app
 
     await diagnostics.info('app-started');
     createMainWindow();
+
+    app.on('before-quit', () => recollAdapter.shutdown());
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {

@@ -40,6 +40,12 @@ describe('runtime manifest', () => {
     expect(() =>
       parseRuntimeManifest({
         ...validManifest,
+        recollindexExecutable: '..\\recollindex.exe',
+      }),
+    ).toThrow('invalid');
+    expect(() =>
+      parseRuntimeManifest({
+        ...validManifest,
         requiredFiles: ['bin/recollindex'],
       }),
     ).toThrow('required files');

@@ -22,13 +22,15 @@ afterEach(async () => {
 describe('Recoll config', () => {
   it('quotes paths deterministically and includes the isolated index settings', () => {
     const config = createRecollConfig({
-      libraryRoot: '/library/كتب "quoted"',
+      libraryRoot: '/library/كتب "quoted" $cash',
       indexDirectory: '/app/index',
       helperDirectories: ['/runtime/helpers one', '/runtime/helpers-two'],
       runtimeTempDirectory: '/app/runtime temp',
     });
 
-    expect(config).toContain('topdirs = "/library/كتب \\"quoted\\""');
+    expect(config).toContain(
+      'topdirs = "/library/كتب \\"quoted\\" \\$cash"',
+    );
     expect(config).toContain('dbdir = "/app/index"');
     expect(config).toContain('followLinks = 0');
     expect(config).toContain('onlyNames = *.pdf *.PDF *.doc *.DOC *.docx *.DOCX');

@@ -13,7 +13,10 @@ const quoteRecollValue = (value: string): string => {
     throw new Error('Recoll config paths must not contain control characters.');
   }
 
-  return `"${value.replace(/\\/gu, '\\\\').replace(/"/gu, '\\"')}"`;
+  return `"${value
+    .replace(/\\/gu, '\\\\')
+    .replace(/"/gu, '\\"')
+    .replace(/\$/gu, '\\$')}"`;
 };
 
 export const createRecollConfig = (input: RecollConfigInput): string => {

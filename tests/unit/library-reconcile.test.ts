@@ -96,7 +96,7 @@ describe('reconcileLibrary', () => {
     expect(first.changes).toEqual({
       addedBookIds: ['new-id'],
       changedBookIds: ['changed-id'],
-      removedBookIds: ['missing-id'],
+      removedBooks: [{ bookId: 'missing-id', relativePath: 'missing.pdf' }],
       requiresRecovery: false,
     });
     expect(first.state.books).toEqual(
@@ -122,7 +122,7 @@ describe('reconcileLibrary', () => {
     expect(second.changes).toEqual({
       addedBookIds: [],
       changedBookIds: [],
-      removedBookIds: [],
+      removedBooks: [],
       requiresRecovery: false,
     });
     expect(second.state).toEqual(first.state);
@@ -195,7 +195,9 @@ describe('reconcileLibrary', () => {
     );
 
     expect(result.changes.addedBookIds).toEqual(['renamed-id']);
-    expect(result.changes.removedBookIds).toEqual(['old-id']);
+    expect(result.changes.removedBooks).toEqual([
+      { bookId: 'old-id', relativePath: 'old.pdf' },
+    ]);
     expect(result.state.books.map((book) => book.relativePath)).toEqual([
       'renamed.pdf',
     ]);

@@ -71,11 +71,24 @@ const mapProcessError = (error: unknown): AppError => {
 
 export class RecollAdapter {
   private readonly runner: ProcessRunnerPort;
+  private readonly activeProcesses = new Set<AbortController>();
   private runtime: RecollRuntime | null = null;
   private runtimeInfo: RuntimeInfo = { state: 'booting' };
 
   constructor(private readonly options: RecollAdapterOptions) {
     this.runner = options.runner ?? new ProcessRunner();
+  }
+
+  setLibraryRoot(libraryRoot: string): void {
+    this.options.libraryRoot = libraryRoot;
+    this.runtime = null;
+    this.runtimeInfo = { state: 'booting' };
+  }
+
+  shutdown(): void {
+    for (const controller of this.activeProcesses) {
+      controller.abort();
+    }
   }
 
   getRuntimeInfo(): RuntimeInfo {
@@ -146,7 +159,7 @@ export class RecollAdapter {
     }
 
     try {
-      const version = await this.runner.run({
+      const version = await this.runProcess({
         executable: runtime.recollindexExecutable,
         args: ['-V'],
         cwd: runtime.root,
@@ -222,7 +235,7 @@ export class RecollAdapter {
   private async runIndexer(args: readonly string[]): Promise<void> {
     const runtime = await this.requireRuntime();
     try {
-      await this.runner.run({
+      await this.runProcess({
         executable: runtime.recollindexExecutable,
         args,
         cwd: runtime.root,
@@ -232,6 +245,18 @@ export class RecollAdapter {
       });
     } catch (error) {
       throw mapProcessError(error);
+    }
+  }
+
+  private async runProcess(
+    options: Omit<Parameters<ProcessRunnerPort['run']>[0], 'signal'>,
+  ) {
+    const controller = new AbortController();
+    this.activeProcesses.add(controller);
+    try {
+      return await this.runner.run({ ...options, signal: controller.signal });
+    } finally {
+      this.activeProcesses.delete(controller);
     }
   }
 }

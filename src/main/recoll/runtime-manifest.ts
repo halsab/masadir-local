@@ -18,9 +18,13 @@ const isSafeRelativePath = (value: unknown): value is string => {
     return false;
   }
 
+  const segments = value.split(/[\\/]/u);
   const normalized = path.normalize(value);
   return (
     !path.isAbsolute(value) &&
+    !path.win32.isAbsolute(value) &&
+    !path.posix.isAbsolute(value) &&
+    !segments.includes('..') &&
     normalized !== '..' &&
     !normalized.startsWith(`..${path.sep}`)
   );

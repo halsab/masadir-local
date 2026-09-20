@@ -76,7 +76,9 @@ export const registerIpcHandlers = ({
   handle(IpcChannel.libraryTrashBook, parseBookIdArgs, (bookId) =>
     library.trashBook(bookId),
   );
-  handle(IpcChannel.libraryRetryIndex, parseBookIdArgs, notImplemented);
+  handle(IpcChannel.libraryRetryIndex, parseBookIdArgs, (bookId) =>
+    library.retryIndex(bookId),
+  );
   handle(IpcChannel.libraryOpenFolder, parseNoArgs, () => library.openFolder());
   handle(IpcChannel.searchBooks, parseSearchBooksArgs, notImplemented);
   handle(IpcChannel.searchMatches, parseSearchMatchesArgs, notImplemented);

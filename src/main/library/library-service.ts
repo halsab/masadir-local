@@ -32,6 +32,7 @@ import {
   assertLibraryRootLocation,
   resolveLibraryPath,
 } from './path-safety';
+import type { IndexService } from './index-service';
 
 interface LibraryDialogs {
   chooseDirectory(): Promise<string | null>;
@@ -48,6 +49,7 @@ interface LibraryShell {
 export interface LibraryServiceOptions {
   dialogs: LibraryDialogs;
   forbiddenRoots: readonly string[];
+  indexService: IndexService;
   settings: Settings;
   settingsService: SettingsService;
   shell: LibraryShell;
@@ -151,6 +153,7 @@ export class LibraryService {
       existingNames.add(finalName);
       addedBookIds.push(book.bookId);
       await this.options.stateStore.save(this.state);
+      await this.options.indexService.indexImportedBook(book, this.state);
     }
 
     this.status = this.state.books.length === 0 ? 'empty' : 'ready';
@@ -174,7 +177,16 @@ export class LibraryService {
       (candidate) => candidate.bookId !== bookId,
     );
     await this.options.stateStore.save(this.state);
+    await this.options.indexService.removeTrashedFile(filePath);
     this.status = this.state.books.length === 0 ? 'empty' : 'ready';
+  }
+
+  async retryIndex(bookId: string): Promise<void> {
+    const book = this.state.books.find((candidate) => candidate.bookId === bookId);
+    if (book === undefined) {
+      throw new AppError(ErrorCode.bookNotFound, 'Книга не найдена.');
+    }
+    await this.options.indexService.indexImportedBook(book, this.state);
   }
 
   openFolder(): void {
@@ -195,11 +207,16 @@ export class LibraryService {
   async initializeRoot(canonicalRoot: string): Promise<void> {
     this.setReconciling(canonicalRoot);
     try {
+      await this.options.indexService.setLibraryRoot(canonicalRoot);
       const result = await reconcileLibrary(
         canonicalRoot,
         this.options.stateStore,
       );
       this.setLoadedState(canonicalRoot, result.state);
+      await this.options.indexService.applyLibraryChanges(
+        result.changes,
+        result.state,
+      );
     } catch (error) {
       this.status = 'unavailable';
       throw error;
