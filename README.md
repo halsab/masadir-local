@@ -9,5 +9,3 @@
 Стек: Electron + TypeScript + Recoll.
 
 Каноническая документация: [docs/README.md](docs/README.md).
-
-Команды установки и разработки появятся после настройки toolchain на этапе A.

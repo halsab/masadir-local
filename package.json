@@ -1,0 +1,47 @@
+{
+  "name": "masadir-desktop",
+  "productName": "Masādir",
+  "version": "0.1.0",
+  "description": "Local full-text search desktop application for a book library",
+  "main": ".webpack/main",
+  "private": true,
+  "scripts": {
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint --ext .ts .",
+    "format": "prettier --write .",
+    "test": "npm run test:unit && npm run test:recoll",
+    "test:unit": "vitest run tests/unit",
+    "test:recoll": "vitest run tests/integration/recoll --passWithNoTests"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "electron-squirrel-startup": "^1.0.1"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.11.2",
+    "@electron-forge/maker-squirrel": "^7.11.2",
+    "@electron-forge/maker-zip": "^7.11.2",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.11.2",
+    "@electron-forge/plugin-fuses": "^7.11.2",
+    "@electron-forge/plugin-webpack": "^7.11.2",
+    "@electron/fuses": "^1.8.0",
+    "@types/electron-squirrel-startup": "^1.0.2",
+    "@typescript-eslint/eslint-plugin": "^8.44.1",
+    "@typescript-eslint/parser": "^8.44.1",
+    "@vercel/webpack-asset-relocator-loader": "1.7.3",
+    "css-loader": "^7.1.2",
+    "electron": "44.4.3",
+    "eslint": "^8.57.1",
+    "eslint-plugin-import": "^2.32.0",
+    "fork-ts-checker-webpack-plugin": "^9.1.0",
+    "node-loader": "^2.1.0",
+    "prettier": "^3.6.2",
+    "style-loader": "^4.0.0",
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}
