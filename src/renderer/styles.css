@@ -78,6 +78,7 @@ h2 { margin: 0; font-size: 18px; line-height: 1.35; }
 .status-failed { color: var(--danger); }
 .status-failed::before { background: var(--danger); }
 .danger-button { border: 0; padding: 10px 4px; color: var(--danger); background: transparent; }
+.danger-button:focus-visible, .load-more:focus-visible { outline: 3px solid #9bb5aa; outline-offset: 3px; }
 .match-heading { margin: 72px 0 36px; }
 .match-heading h1 { font-size: clamp(32px, 4vw, 50px); }
 .match-list { border-top: 1px solid var(--line); }

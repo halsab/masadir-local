@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import type { IndexState } from '../../shared/contracts';
+import type { BookStatus, IndexState } from '../../shared/contracts';
 import type { RuntimeInfo } from '../recoll/recoll-adapter';
 import type { IndexMetadataStore } from '../recoll/index-metadata-store';
 import type { StoredBook, StoredLibraryState } from './library-types';
@@ -40,6 +40,10 @@ export class IndexService {
     private readonly stateStore: StateStorePort,
     private readonly metadataStore: IndexMetadataStore,
     libraryRoot: string,
+    private readonly events?: {
+      bookStatusChanged(bookId: string, status: BookStatus): void;
+      indexStateChanged(state: IndexState): void;
+    },
   ) {
     this.libraryRoot = libraryRoot;
   }
@@ -58,7 +62,7 @@ export class IndexService {
       this.adapter.setLibraryRoot(libraryRoot);
       const runtime = await this.adapter.preflight();
       if (runtime.state !== 'ready') {
-        this.state = 'failed';
+        this.setState('failed');
         return runtime;
       }
 
@@ -70,12 +74,12 @@ export class IndexService {
       ) {
         // Несовместимый индекс не удаляется автоматически: rebuild запускается отдельно.
         this.compatibilityBlocked = true;
-        this.state = 'failed';
+        this.setState('failed');
         return runtime;
       }
       this.compatibilityBlocked = false;
       this.metadataNeedsRecovery = metadata.kind === 'corrupted';
-      this.state = this.metadataNeedsRecovery ? 'needsRecovery' : 'ready';
+      this.setState(this.metadataNeedsRecovery ? 'needsRecovery' : 'ready');
       return runtime;
     });
   }
@@ -98,16 +102,16 @@ export class IndexService {
   removeTrashedFile(absolutePath: string): Promise<void> {
     return this.enqueue(async () => {
       if (this.compatibilityBlocked) {
-        this.state = 'failed';
+        this.setState('failed');
         return;
       }
-      this.state = 'mutating';
+      this.setState('mutating');
       try {
         await this.adapter.removeFile(absolutePath);
         await this.saveCompatibilityMetadata();
-        this.state = 'ready';
+        this.setState('ready');
       } catch {
-        this.state = 'needsRecovery';
+        this.setState('needsRecovery');
       }
     });
   }
@@ -139,11 +143,11 @@ export class IndexService {
       }
 
       for (const removed of changes.removedBooks) {
-        this.state = 'mutating';
+        this.setState('mutating');
         try {
           await this.adapter.removeFile(this.absolutePath(removed.relativePath));
         } catch {
-          this.state = 'needsRecovery';
+          this.setState('needsRecovery');
           return;
         }
       }
@@ -162,7 +166,7 @@ export class IndexService {
       }
 
       await this.saveCompatibilityMetadata();
-      this.state = 'ready';
+      this.setState('ready');
     });
   }
 
@@ -176,13 +180,13 @@ export class IndexService {
     changed: boolean,
   ): Promise<void> {
     if (this.compatibilityBlocked) {
-      book.indexStatus = 'failed';
+      this.setBookStatus(book, 'failed');
       await this.stateStore.save(libraryState);
-      this.state = 'failed';
+      this.setState('failed');
       return;
     }
-    this.state = 'mutating';
-    book.indexStatus = 'indexing';
+    this.setState('mutating');
+    this.setBookStatus(book, 'indexing');
     await this.stateStore.save(libraryState);
     try {
       const absolutePath = this.absolutePath(book.relativePath);
@@ -191,38 +195,39 @@ export class IndexService {
       } else {
         await this.adapter.indexFile(absolutePath);
       }
-      book.indexStatus = 'ready';
+      this.setBookStatus(book, 'ready');
       await this.saveCompatibilityMetadata();
     } catch {
-      book.indexStatus = 'failed';
+      this.setBookStatus(book, 'failed');
     }
     await this.stateStore.save(libraryState);
-    this.state =
-      this.adapter.getRuntimeInfo().state === 'ready' ? 'ready' : 'failed';
+    this.setState(
+      this.adapter.getRuntimeInfo().state === 'ready' ? 'ready' : 'failed',
+    );
   }
 
   private async recover(libraryState: StoredLibraryState): Promise<void> {
     if (this.compatibilityBlocked) {
-      this.state = 'failed';
+      this.setState('failed');
       return;
     }
-    this.state = 'recovering';
+    this.setState('recovering');
     try {
       await this.adapter.recoverIncremental();
       for (const book of libraryState.books) {
-        book.indexStatus = 'ready';
+        this.setBookStatus(book, 'ready');
       }
       await this.stateStore.save(libraryState);
       await this.saveCompatibilityMetadata();
       this.metadataNeedsRecovery = false;
-      this.state = 'ready';
+      this.setState('ready');
     } catch {
       this.markBooksFailed(
         libraryState.books.map((book) => book.bookId),
         libraryState,
       );
       await this.stateStore.save(libraryState);
-      this.state = 'failed';
+      this.setState('failed');
     }
   }
 
@@ -233,7 +238,7 @@ export class IndexService {
     const ids = new Set(bookIds);
     for (const book of libraryState.books) {
       if (ids.has(book.bookId)) {
-        book.indexStatus = 'failed';
+        this.setBookStatus(book, 'failed');
       }
     }
   }
@@ -258,6 +263,18 @@ export class IndexService {
       runtimeFingerprint: runtime.runtimeFingerprint,
       indexCompatibilityVersion: runtime.indexCompatibilityVersion,
     });
+  }
+
+  private setState(state: IndexState): void {
+    if (this.state === state) return;
+    this.state = state;
+    this.events?.indexStateChanged(state);
+  }
+
+  private setBookStatus(book: StoredBook, status: BookStatus): void {
+    if (book.indexStatus === status) return;
+    book.indexStatus = status;
+    this.events?.bookStatusChanged(book.bookId, status);
   }
 
   private enqueue<T>(operation: () => Promise<T>): Promise<T> {

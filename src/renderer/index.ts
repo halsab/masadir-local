@@ -16,6 +16,8 @@ const render = (): void => {
   root.replaceChildren();
   setBusy(root, state.loading);
   const actions: SearchActions = {
+    addBooks: () => void runLibraryAction(() => window.masadir.library.addBooks()),
+    chooseRoot: () => void runLibraryAction(() => window.masadir.library.chooseRoot()),
     openLibrary: () => {
       state.route = 'library';
       render();
@@ -160,6 +162,18 @@ const copyMatch = async (
 };
 
 const start = async (): Promise<void> => {
+  const refreshFromEvent = (): void => {
+    void (async () => {
+      await refreshSnapshot();
+      render();
+    })();
+  };
+  const unsubscribeBook = window.masadir.events.onBookStatusChanged(refreshFromEvent);
+  const unsubscribeIndex = window.masadir.events.onIndexStateChanged(refreshFromEvent);
+  window.addEventListener('beforeunload', () => {
+    unsubscribeBook();
+    unsubscribeIndex();
+  }, { once: true });
   await refreshSnapshot();
   state.loading = false;
   render();

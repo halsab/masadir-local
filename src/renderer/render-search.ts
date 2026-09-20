@@ -4,6 +4,8 @@ import type { RendererState } from './state';
 import { searchBlockReason } from './state';
 
 export interface SearchActions {
+  addBooks(): void;
+  chooseRoot(): void;
   openLibrary(): void;
   openMatches(book: BookSearchResult): void;
   search(query: string, page: number): void;
@@ -57,8 +59,13 @@ export const renderHome = (
     const empty = element('div', 'home-empty');
     empty.append(
       element('p', undefined, 'Добавьте книги, чтобы начать поиск.'),
-      button('Добавить книги', 'secondary-button', actions.openLibrary),
     );
+    const emptyActions = element('div', 'action-row');
+    emptyActions.append(
+      button('Добавить книги', 'secondary-button', actions.addBooks),
+      button('Выбрать папку библиотеки', 'text-button', actions.chooseRoot),
+    );
+    empty.append(emptyActions);
     hero.append(empty);
   } else if ((snapshot?.recentQueries.length ?? 0) > 0) {
     const recent = element('div', 'recent-searches');

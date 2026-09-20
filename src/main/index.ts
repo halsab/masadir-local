@@ -4,7 +4,12 @@ import path from 'node:path';
 import { app, BrowserWindow, dialog, shell } from 'electron';
 import started from 'electron-squirrel-startup';
 
-import { AppError, ErrorCode, type AppSnapshot } from '../shared/contracts';
+import {
+  AppError,
+  ErrorCode,
+  IpcChannel,
+  type AppSnapshot,
+} from '../shared/contracts';
 import { createMainWindow } from './app/create-main-window';
 import { registerIpcHandlers } from './app/register-ipc-handlers';
 import { DocumentService } from './document/document-service';
@@ -57,11 +62,22 @@ app
       paths,
       libraryRoot: initialRoot,
     });
+    const sendToRenderers = (channel: string, payload: unknown): void => {
+      for (const window of BrowserWindow.getAllWindows()) {
+        if (!window.isDestroyed()) window.webContents.send(channel, payload);
+      }
+    };
     const indexService = new IndexService(
       recollAdapter,
       stateStore,
       new IndexMetadataStore(paths.recollIndex),
       initialRoot,
+      {
+        bookStatusChanged: (bookId, status) =>
+          sendToRenderers(IpcChannel.bookStatusChanged, { bookId, status }),
+        indexStateChanged: (state) =>
+          sendToRenderers(IpcChannel.indexStateChanged, { state }),
+      },
     );
     const library = new LibraryService({
       dialogs: {
