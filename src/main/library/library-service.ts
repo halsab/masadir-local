@@ -82,6 +82,13 @@ export class LibraryService {
     return this.getState().books;
   }
 
+  getSearchCatalog(): { libraryRoot: string; books: StoredBook[] } {
+    return {
+      libraryRoot: this.requireRoot(),
+      books: this.state.books.map((book) => ({ ...book })),
+    };
+  }
+
   async chooseRoot(): Promise<ChooseRootResult> {
     const selectedPath = await this.options.dialogs.chooseDirectory();
     if (selectedPath === null) {

@@ -13,12 +13,13 @@ import type { RecollRuntime } from '../../src/main/recoll/runtime-resolver';
 
 class RecordingRunner implements ProcessRunnerPort {
   calls: ProcessRunOptions[] = [];
+  stdout = 'recollindex 1.40.2';
 
   async run(options: ProcessRunOptions): Promise<ProcessRunResult> {
     this.calls.push(options);
     return {
       exitCode: 0,
-      stdout: 'recollindex 1.40.2',
+      stdout: this.stdout,
       stderrTail: '',
       stdoutTruncated: false,
       stderrTruncated: false,
@@ -86,5 +87,43 @@ describe('RecollAdapter commands', () => {
     ]);
     expect(runner.calls.every((call) => call.executable === runtime.recollindexExecutable)).toBe(true);
     expect(runner.calls.every((call) => call.maxStdoutBytes === 0)).toBe(true);
+  });
+
+  it('uses simple ALL TERMS mode and requests one extra book result', async () => {
+    const runner = new RecordingRunner();
+    runner.stdout = [
+      'Recoll query: query',
+      'Printing at most 0 results from first 20',
+      `${Buffer.from('file:///library/a.pdf').toString('base64')} ${Buffer.from('A').toString('base64')}  ${Buffer.from('application/pdf').toString('base64')} `,
+      '',
+    ].join('\n');
+    const adapter = new RecollAdapter({
+      resolver: { resolve: async () => runtime },
+      paths,
+      libraryRoot: '/library',
+      runner,
+    });
+    Object.assign(adapter, { runtime, runtimeInfo: { state: 'ready' } });
+
+    await expect(adapter.searchBooks('safe query', 20)).resolves.toEqual([
+      {
+        author: '',
+        mimeType: 'application/pdf',
+        resultOffset: 20,
+        title: 'A',
+        url: 'file:///library/a.pdf',
+      },
+    ]);
+    expect(runner.calls[0].args).toEqual([
+      '-c',
+      '/app/config',
+      '-a',
+      '-n',
+      '20-21',
+      '-F',
+      'url title author mtype',
+      'safe query',
+    ]);
+    expect(runner.calls[0].timeoutMs).toBe(30_000);
   });
 });

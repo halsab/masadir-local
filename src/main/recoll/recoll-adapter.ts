@@ -4,6 +4,7 @@ import path from 'node:path';
 import { AppError, ErrorCode } from '../../shared/contracts';
 import type { AppPaths } from '../platform/app-paths';
 import { ProcessRunError, ProcessRunner, type ProcessRunnerPort } from './process-runner';
+import { parseRecollFieldOutput } from './recoll-output-parser';
 import { writeRecollConfig } from './recoll-config';
 import type { RecollRuntime, RuntimeResolver } from './runtime-resolver';
 
@@ -29,6 +30,15 @@ export interface RecollAdapterOptions {
 }
 
 const VERSION_TIMEOUT_MS = 10_000;
+const SEARCH_TIMEOUT_MS = 30_000;
+
+export interface RecollBookResult {
+  author: string;
+  mimeType: string;
+  resultOffset: number;
+  title: string;
+  url: string;
+}
 
 const createRuntimeEnvironment = (runtime: RecollRuntime): NodeJS.ProcessEnv => {
   const inheritedKeys = [
@@ -209,8 +219,51 @@ export class RecollAdapter {
     await this.runIndexer(['-c', this.options.paths.recollConfig]);
   }
 
-  async searchBooks(): Promise<never> {
-    throw new AppError(ErrorCode.notImplemented, 'Поиск будет реализован на этапе D.');
+  async searchBooks(
+    normalizedQuery: string,
+    offset: number,
+  ): Promise<RecollBookResult[]> {
+    const runtime = await this.requireRuntime();
+    try {
+      const result = await this.runProcess({
+        executable: runtime.recollqExecutable,
+        args: [
+          '-c',
+          this.options.paths.recollConfig,
+          '-a',
+          '-n',
+          `${offset}-21`,
+          '-F',
+          'url title author mtype',
+          normalizedQuery,
+        ],
+        cwd: runtime.root,
+        env: createRuntimeEnvironment(runtime),
+        timeoutMs: SEARCH_TIMEOUT_MS,
+        maxStdoutBytes: 512 * 1024,
+        maxStderrBytes: 32 * 1024,
+      });
+      if (result.stdoutTruncated) {
+        throw new AppError(
+          ErrorCode.recollOutputInvalid,
+          'Recoll вернул слишком большой результат.',
+        );
+      }
+      return parseRecollFieldOutput(result.stdout, 4, offset).map(
+        ({ fields, resultOffset }) => ({
+          url: fields[0],
+          title: fields[1],
+          author: fields[2],
+          mimeType: fields[3],
+          resultOffset,
+        }),
+      );
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw mapProcessError(error);
+    }
   }
 
   async searchMatches(): Promise<never> {

@@ -35,15 +35,17 @@ export interface ChooseRootResult {
   library: LibraryState;
 }
 
-export interface SearchBookResult {
+export interface BookSearchResult {
   bookId: string;
   title: string;
+  author?: string;
+  mimeType: string;
 }
 
 export interface SearchBooksPage {
   page: number;
-  hasMore: boolean;
-  items: SearchBookResult[];
+  hasNext: boolean;
+  items: BookSearchResult[];
 }
 
 export interface SearchMatch {
