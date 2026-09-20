@@ -126,6 +126,7 @@ describe('RecollAdapter commands', () => {
       '20-21',
       '-F',
       'url title author mtype',
+      '--',
       'safe query',
     ]);
     expect(runner.calls[0].timeoutMs).toBe(30_000);
@@ -164,6 +165,7 @@ describe('RecollAdapter commands', () => {
       '-A',
       '-p',
       '40',
+      '--',
       'safe query',
     ]);
     expect(runner.calls[0].timeoutMs).toBe(30_000);
