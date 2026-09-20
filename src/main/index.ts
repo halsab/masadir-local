@@ -1,34 +1,18 @@
 import { app, BrowserWindow } from 'electron';
 import started from 'electron-squirrel-startup';
 
-declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
-declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
+import { createMainWindow } from './app/create-main-window';
 
 if (started) {
   app.quit();
 }
 
-const createWindow = (): void => {
-  const window = new BrowserWindow({
-    width: 1000,
-    height: 720,
-    webPreferences: {
-      preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
-      nodeIntegration: false,
-      contextIsolation: true,
-      sandbox: true,
-    },
-  });
-
-  void window.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
-};
-
 app.whenReady().then(() => {
-  createWindow();
+  createMainWindow();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      createMainWindow();
     }
   });
 });
