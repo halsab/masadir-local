@@ -9,3 +9,21 @@
 Стек: Electron + TypeScript + Recoll.
 
 Каноническая документация: [docs/README.md](docs/README.md).
+
+## Разработка
+
+```sh
+npm install
+npm start
+```
+
+Основные проверки:
+
+```sh
+npm run test:unit
+npm run typecheck
+npm run lint
+```
+
+Локальные настройки, индекс и диагностика хранятся в каталоге
+`<userData>/Masadir/` и не отправляются во внешние сервисы.
