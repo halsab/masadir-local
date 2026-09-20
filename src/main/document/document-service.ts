@@ -18,6 +18,12 @@ interface DocumentShell {
   openPath(filePath: string): Promise<string>;
 }
 
+const isMissingFileError = (error: unknown): boolean =>
+  typeof error === 'object' &&
+  error !== null &&
+  'code' in error &&
+  error.code === 'ENOENT';
+
 export class DocumentService {
   constructor(
     private readonly library: DocumentLibrary,
@@ -31,10 +37,15 @@ export class DocumentService {
       throw new AppError(ErrorCode.bookNotFound, 'Книга не найдена.');
     }
 
-    const filePath = await resolveLibraryPath(
-      catalog.libraryRoot,
-      book.relativePath,
-    );
+    let filePath: string;
+    try {
+      filePath = await resolveLibraryPath(catalog.libraryRoot, book.relativePath);
+    } catch (error) {
+      if (isMissingFileError(error)) {
+        throw new AppError(ErrorCode.ioError, 'Файл книги недоступен.');
+      }
+      throw error;
+    }
     const metadata = await stat(filePath);
     if (!metadata.isFile()) {
       throw new AppError(ErrorCode.ioError, 'Файл книги недоступен.');

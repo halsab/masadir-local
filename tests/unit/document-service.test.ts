@@ -87,7 +87,9 @@ describe('DocumentService', () => {
   it('does not open a missing or unsupported file', async () => {
     const root = await createTemporaryDirectory();
     const missing = createService(root, [book('missing.pdf')]);
-    await expect(missing.service.open('book-1')).rejects.toBeInstanceOf(Error);
+    await expect(missing.service.open('book-1')).rejects.toMatchObject({
+      code: ErrorCode.ioError,
+    });
     expect(missing.openPath).not.toHaveBeenCalled();
 
     await writeFile(path.join(root, 'book.txt'), 'document');
