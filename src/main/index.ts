@@ -105,8 +105,8 @@ app
       settings,
       settingsService,
       shell: {
+        openPath: (filePath) => shell.openPath(filePath),
         trashItem: (filePath) => shell.trashItem(filePath),
-        showItemInFolder: (filePath) => shell.showItemInFolder(filePath),
       },
       stateStore,
     });

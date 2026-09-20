@@ -42,8 +42,8 @@ interface LibraryDialogs {
 }
 
 interface LibraryShell {
+  openPath(filePath: string): Promise<string>;
   trashItem(filePath: string): Promise<void>;
-  showItemInFolder(filePath: string): void;
 }
 
 export interface LibraryServiceOptions {
@@ -200,8 +200,11 @@ export class LibraryService {
     await this.options.indexService.indexImportedBook(book, this.state);
   }
 
-  openFolder(): void {
-    this.options.shell.showItemInFolder(this.requireRoot());
+  async openFolder(): Promise<void> {
+    const shellError = await this.options.shell.openPath(this.requireRoot());
+    if (shellError.length > 0) {
+      throw new AppError(ErrorCode.ioError, 'Не удалось открыть папку библиотеки.');
+    }
   }
 
   setLoadedState(canonicalRoot: string, state: StoredLibraryState): void {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   parseDocumentOpenArgs,
+  parseClipboardWriteArgs,
   parseSearchBooksArgs,
   parseSearchMatchesArgs,
 } from '../../src/main/app/ipc-validation';
@@ -42,5 +43,10 @@ describe('IPC argument validation', () => {
     expect(parseDocumentOpenArgs(['book-id'])).toEqual(['book-id']);
     expect(parseDocumentOpenArgs(['book-id', 12])).toEqual(['book-id', 12]);
     expectInvalidArguments(() => parseDocumentOpenArgs(['book-id', -1]));
+  });
+
+  it('bounds clipboard text without exposing further clipboard operations', () => {
+    expect(parseClipboardWriteArgs(['цитата'])).toEqual(['цитата']);
+    expectInvalidArguments(() => parseClipboardWriteArgs(['a'.repeat(1_000_001)]));
   });
 });
