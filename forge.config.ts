@@ -124,7 +124,10 @@ const config: ForgeConfig = {
           identityValidation: false,
           strictVerify: false,
           ignore: 'Contents/Resources/darwin-arm64/',
-          optionsForFile: () => ({ timestamp: 'none' }),
+          optionsForFile: () => ({
+            timestamp: 'none',
+            hardenedRuntime: false,
+          }),
         },
     ...(notaryProfile
       ? { osxNotarize: { keychainProfile: notaryProfile } }
