@@ -12,6 +12,13 @@ if (root === null) throw new Error('Renderer root is missing.');
 
 const state = createRendererState();
 
+const focusHeading = (): void => {
+  const heading = root.querySelector<HTMLHeadingElement>('h1');
+  if (heading === null) return;
+  heading.tabIndex = -1;
+  heading.focus();
+};
+
 const render = (): void => {
   root.replaceChildren();
   setBusy(root, state.loading);
@@ -21,6 +28,7 @@ const render = (): void => {
     openLibrary: () => {
       state.route = 'library';
       render();
+      focusHeading();
     },
     openMatches: (book) => void openMatches(book),
     search: (query, page) => {
@@ -29,6 +37,7 @@ const render = (): void => {
         state.query = '';
         state.books = [];
         render();
+        focusHeading();
         return;
       }
       void search(query, page);
@@ -40,6 +49,7 @@ const render = (): void => {
     goHome: () => {
       state.route = 'home';
       render();
+      focusHeading();
     },
     openFolder: () => void runAction(() => window.masadir.library.openFolder()),
     retryIndex: (bookId) => void runLibraryAction(() => window.masadir.library.retryIndex(bookId)),
@@ -50,6 +60,7 @@ const render = (): void => {
       state.route = 'books';
       state.error = null;
       render();
+      focusHeading();
     },
     copy: (match, target) => void copyMatch(match, target),
     loadMore: () => void loadMatches(state.matchesLimit + 20),
@@ -84,6 +95,7 @@ const search = async (query: string, page: number): Promise<void> => {
   state.loading = true;
   state.error = null;
   render();
+  if (page === 1) focusHeading();
   const result = await window.masadir.search.searchBooks(query, page);
   if (result.ok) {
     state.books = result.value.items;
@@ -96,6 +108,7 @@ const search = async (query: string, page: number): Promise<void> => {
   }
   state.loading = false;
   render();
+  if (page === 1) focusHeading();
 };
 
 const openMatches = async (book: BookSearchResult): Promise<void> => {
@@ -103,7 +116,10 @@ const openMatches = async (book: BookSearchResult): Promise<void> => {
   state.route = 'matches';
   state.matches = [];
   state.matchesLimit = 20;
+  render();
+  focusHeading();
   await loadMatches(20);
+  focusHeading();
 };
 
 const loadMatches = async (limit: number): Promise<void> => {
