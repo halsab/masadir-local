@@ -14,11 +14,7 @@ const FuseState = { DISABLE: 48, ENABLE: 49 };
 
 const target = process.argv[2] ?? `${process.platform}-${process.arch}`;
 if (!targets[target]) throw new Error(`Unsupported package target: ${target}`);
-if (target !== `${process.platform}-${process.arch}`) {
-  throw new Error(
-    'Verify packages on the target operating system and architecture.',
-  );
-}
+const bundleOnly = process.argv.includes('--bundle-only');
 const repository = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..',
@@ -65,8 +61,6 @@ const artifact =
         repository,
         'out',
         'make',
-        'dmg',
-        arch,
         `${appName}-${packageJson.version}-${arch}.dmg`,
       )
     : path.join(
@@ -77,12 +71,14 @@ const artifact =
         arch,
         'Masadir-Setup.exe',
       );
-await fileExists(artifact);
-assert(
-  (await stat(artifact)).size > 0,
-  `Empty installable artifact: ${artifact}`,
-);
-if (platform === 'win32') {
+if (!bundleOnly) {
+  await fileExists(artifact);
+  assert(
+    (await stat(artifact)).size > 0,
+    `Empty installable artifact: ${artifact}`,
+  );
+}
+if (platform === 'win32' && !bundleOnly) {
   await fileExists(
     path.join(repository, 'out', 'make', 'squirrel.windows', arch, 'RELEASES'),
   );
@@ -96,6 +92,29 @@ if (platform === 'win32') {
       `masadir_desktop-${packageJson.version}-full.nupkg`,
     ),
   );
+  const packageEntries = execFileSync(
+    'unzip',
+    [
+      '-Z1',
+      path.join(
+        repository,
+        'out',
+        'make',
+        'squirrel.windows',
+        arch,
+        `masadir_desktop-${packageJson.version}-full.nupkg`,
+      ),
+    ],
+    { encoding: 'utf8' },
+  ).replaceAll('\\', '/');
+  for (const entry of [
+    'Masadir.exe',
+    'resources/app.asar',
+    `resources/${target}/runtime-manifest.json`,
+    `resources/${target}/`,
+  ]) {
+    assert(packageEntries.includes(entry), `NuGet package lacks ${entry}.`);
+  }
 }
 
 await fileExists(executable);
@@ -118,6 +137,16 @@ assert(
 
 const runtimeRoot = path.join(resources, target);
 const manifest = await verifyRuntime(runtimeRoot, target);
+const sourceManifest = JSON.parse(
+  await readFile(
+    path.join(repository, 'assets', 'runtime', target, 'runtime-manifest.json'),
+    'utf8',
+  ),
+);
+assert(
+  JSON.stringify(manifest) === JSON.stringify(sourceManifest),
+  'Packaged runtime differs from the current pinned runtime.',
+);
 const resolvedIndexer = path.resolve(
   resources,
   target,
@@ -189,4 +218,4 @@ for (const [fuse, state] of [
     `Unexpected Electron fuse: ${FuseV1Options[fuse]}`,
   );
 }
-console.log(`Verified ${target}: ${artifact}`);
+console.log(`Verified ${target} ${bundleOnly ? 'app bundle' : artifact}.`);
