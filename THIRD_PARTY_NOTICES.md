@@ -7,9 +7,8 @@ installed Electron distribution. Source: https://github.com/electron/electron.
 
 The Windows build also packages `electron-squirrel-startup` 1.0.1
 (Apache-2.0; source: https://github.com/mongodb-js/electron-squirrel-startup).
-Its license is included in the application archive with the dependency.
+Its license text is bundled in resources as `LICENSE.electron-squirrel-startup`.
 
-Recoll and helper notices must be completed from the exact platform payload
-before packaging. Each runtime manifest lists the exact component names,
-versions, sources, license-text paths and checksums. No Recoll binaries or
-third-party license texts have been supplied to this repository yet.
+Recoll and helper notices are recorded by the packaged platform's
+`runtime-manifest.json`. It lists exact component names, versions, sources,
+checksums and paths to their bundled license texts under the runtime directory.

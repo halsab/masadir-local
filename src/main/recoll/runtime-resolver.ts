@@ -70,10 +70,16 @@ export class RuntimeResolver {
     const manifestPath = path.join(root, 'runtime-manifest.json');
     const serialized = await readFile(manifestPath, 'utf8');
     const manifest = parseRuntimeManifest(JSON.parse(serialized) as unknown);
-    if (manifest.platform !== undefined && manifest.platform !== (this.options.platform ?? process.platform)) {
+    if (
+      manifest.platform !== undefined &&
+      manifest.platform !== (this.options.platform ?? process.platform)
+    ) {
       throw new Error('Runtime manifest platform does not match the host.');
     }
-    if (manifest.arch !== undefined && manifest.arch !== (this.options.arch ?? process.arch)) {
+    if (
+      manifest.arch !== undefined &&
+      manifest.arch !== (this.options.arch ?? process.arch)
+    ) {
       throw new Error('Runtime manifest architecture does not match the host.');
     }
 
@@ -87,7 +93,9 @@ export class RuntimeResolver {
       helperDirectories: manifest.helperDirectories.map((directory) =>
         path.join(root, directory),
       ),
-      requiredFiles: manifest.requiredFiles.map((file) => path.join(root, file)),
+      requiredFiles: manifest.requiredFiles.map((file) =>
+        path.join(root, file),
+      ),
       runtimeFingerprint: createRuntimeFingerprint(manifest),
     };
   }

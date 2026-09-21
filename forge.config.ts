@@ -5,7 +5,12 @@ import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-nati
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { WebpackPlugin } from '@electron-forge/plugin-webpack';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
+import { execFileSync } from 'node:child_process';
+import { copyFile, readFile, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+
+import packageJson from './package.json';
+import electronJson from 'electron/package.json';
 
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
@@ -14,7 +19,17 @@ const target = `${process.platform}-${process.arch}`;
 const macIdentity = process.env.MASADIR_MAC_SIGN_IDENTITY;
 const notaryProfile = process.env.MASADIR_NOTARY_KEYCHAIN_PROFILE;
 const windowsCertificate = process.env.MASADIR_WINDOWS_CERTIFICATE_FILE;
-const windowsCertificatePassword = process.env.MASADIR_WINDOWS_CERTIFICATE_PASSWORD;
+const windowsCertificatePassword =
+  process.env.MASADIR_WINDOWS_CERTIFICATE_PASSWORD;
+const electronVersion = electronJson.version;
+
+const buildTimestamp = (): string => {
+  const epoch = process.env.SOURCE_DATE_EPOCH;
+  if (epoch === undefined) return new Date().toISOString();
+  if (!/^\d+$/u.test(epoch))
+    throw new Error('SOURCE_DATE_EPOCH must be Unix seconds.');
+  return new Date(Number(epoch) * 1000).toISOString();
+};
 
 if (notaryProfile && !macIdentity) {
   throw new Error('Notarization requires MASADIR_MAC_SIGN_IDENTITY.');
@@ -28,13 +43,74 @@ const config: ForgeConfig = {
     asar: true,
     appBundleId: 'io.github.halsab.masadir.desktop',
     executableName: 'Masadir',
+    extendInfo: { LSMinimumSystemVersion: '13.0' },
     extraResource: [
       path.join(__dirname, 'assets', 'runtime', target),
       path.join(__dirname, 'THIRD_PARTY_NOTICES.md'),
       path.join(__dirname, 'node_modules', 'electron', 'dist', 'LICENSE'),
-      path.join(__dirname, 'node_modules', 'electron', 'dist', 'LICENSES.chromium.html'),
+      path.join(
+        __dirname,
+        'node_modules',
+        'electron',
+        'dist',
+        'LICENSES.chromium.html',
+      ),
     ],
-    ignore: [/[/\\]assets[/\\]runtime(?:[/\\]|$)/u],
+    afterCopyExtraResources: [
+      (buildPath, _electronVersion, platform, arch, callback) => {
+        const resources = path.join(
+          buildPath,
+          ...(platform === 'darwin'
+            ? ['Contents', 'Resources']
+            : ['resources']),
+        );
+        const runtimeRoot = path.join(resources, `${platform}-${arch}`);
+        void (async () => {
+          const manifest = JSON.parse(
+            await readFile(
+              path.join(runtimeRoot, 'runtime-manifest.json'),
+              'utf8',
+            ),
+          ) as {
+            recollVersion: string;
+            helperVersions: Record<string, string>;
+            indexCompatibilityVersion: string;
+          };
+          await unlink(
+            path.join(runtimeRoot, 'runtime-manifest.template.json'),
+          ).catch((error: NodeJS.ErrnoException) => {
+            if (error.code !== 'ENOENT') throw error;
+          });
+          await copyFile(
+            path.join(
+              __dirname,
+              'node_modules',
+              'electron-squirrel-startup',
+              'LICENSE',
+            ),
+            path.join(resources, 'LICENSE.electron-squirrel-startup'),
+          );
+          await writeFile(
+            path.join(resources, 'build-manifest.json'),
+            JSON.stringify(
+              {
+                appId: 'io.github.halsab.masadir.desktop',
+                masadirVersion: packageJson.version,
+                electronVersion,
+                recollVersion: manifest.recollVersion,
+                helperVersions: manifest.helperVersions,
+                platform,
+                arch,
+                buildTimestamp: buildTimestamp(),
+                indexCompatibilityVersion: manifest.indexCompatibilityVersion,
+              },
+              null,
+              2,
+            ) + '\n',
+          );
+        })().then(() => callback(), callback);
+      },
+    ],
     ...(macIdentity ? { osxSign: { identity: macIdentity } } : {}),
     ...(notaryProfile
       ? { osxNotarize: { keychainProfile: notaryProfile } }
@@ -55,10 +131,23 @@ const config: ForgeConfig = {
     }),
   ],
   hooks: {
-    prePackage: async (platform, arch) => {
-      if (`${platform}-${arch}` !== target || !['darwin-arm64', 'win32-x64'].includes(target)) {
-        throw new Error(`Build on the matching supported host for ${platform}-${arch}.`);
+    prePackage: async (_forgeConfig, platform, arch) => {
+      if (
+        `${platform}-${arch}` !== target ||
+        !['darwin-arm64', 'win32-x64'].includes(target)
+      ) {
+        throw new Error(
+          `Build on the matching supported host for ${platform}-${arch}.`,
+        );
       }
+      execFileSync(
+        process.execPath,
+        [path.join(__dirname, 'scripts', 'verify-runtime.mjs'), target],
+        {
+          cwd: __dirname,
+          stdio: 'inherit',
+        },
+      );
     },
   },
   plugins: [
