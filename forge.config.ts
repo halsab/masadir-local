@@ -27,6 +27,7 @@ const electronZipDir = process.env.MASADIR_ELECTRON_ZIP_DIR;
 const electronZip = electronZipDir
   ? path.join(electronZipDir, `electron-v${electronVersion}-${target}.zip`)
   : null;
+const shouldFlipFuses = Boolean(macIdentity) || target !== 'darwin-arm64';
 
 const buildTimestamp = (): string => {
   const epoch = process.env.SOURCE_DATE_EPOCH;
@@ -117,18 +118,7 @@ const config: ForgeConfig = {
         })().then(() => callback(), callback);
       },
     ],
-    osxSign: macIdentity
-      ? { identity: macIdentity }
-      : {
-          identity: '-',
-          identityValidation: false,
-          strictVerify: false,
-          ignore: 'Contents/Resources/darwin-arm64/',
-          optionsForFile: () => ({
-            timestamp: 'none',
-            hardenedRuntime: false,
-          }),
-        },
+    ...(macIdentity ? { osxSign: { identity: macIdentity } } : {}),
     ...(notaryProfile
       ? { osxNotarize: { keychainProfile: notaryProfile } }
       : {}),
@@ -177,14 +167,18 @@ const config: ForgeConfig = {
         ],
       },
     }),
-    new FusesPlugin({
-      version: FuseVersion.V1,
-      [FuseV1Options.RunAsNode]: false,
-      [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
-      [FuseV1Options.EnableNodeCliInspectArguments]: false,
-      [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
-      [FuseV1Options.OnlyLoadAppFromAsar]: true,
-    }),
+    ...(shouldFlipFuses
+      ? [
+          new FusesPlugin({
+            version: FuseVersion.V1,
+            [FuseV1Options.RunAsNode]: false,
+            [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
+            [FuseV1Options.EnableNodeCliInspectArguments]: false,
+            [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
+            [FuseV1Options.OnlyLoadAppFromAsar]: true,
+          }),
+        ]
+      : []),
   ],
 };
 

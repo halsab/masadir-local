@@ -206,13 +206,24 @@ if (platform === 'darwin') {
 
 const fuses = await getCurrentFuseWire(executable);
 assert(fuses.version === FuseVersion.V1, 'Unexpected fuse version.');
-for (const [fuse, state] of [
-  [FuseV1Options.RunAsNode, FuseState.DISABLE],
-  [FuseV1Options.EnableNodeOptionsEnvironmentVariable, FuseState.DISABLE],
-  [FuseV1Options.EnableNodeCliInspectArguments, FuseState.DISABLE],
-  [FuseV1Options.EnableEmbeddedAsarIntegrityValidation, FuseState.ENABLE],
-  [FuseV1Options.OnlyLoadAppFromAsar, FuseState.ENABLE],
-]) {
+const usesUpstreamMacElectron =
+  platform === 'darwin' && !process.env.MASADIR_MAC_SIGN_IDENTITY;
+const expectedFuses = usesUpstreamMacElectron
+  ? [
+      [FuseV1Options.RunAsNode, FuseState.ENABLE],
+      [FuseV1Options.EnableNodeOptionsEnvironmentVariable, FuseState.ENABLE],
+      [FuseV1Options.EnableNodeCliInspectArguments, FuseState.ENABLE],
+      [FuseV1Options.EnableEmbeddedAsarIntegrityValidation, FuseState.DISABLE],
+      [FuseV1Options.OnlyLoadAppFromAsar, FuseState.DISABLE],
+    ]
+  : [
+      [FuseV1Options.RunAsNode, FuseState.DISABLE],
+      [FuseV1Options.EnableNodeOptionsEnvironmentVariable, FuseState.DISABLE],
+      [FuseV1Options.EnableNodeCliInspectArguments, FuseState.DISABLE],
+      [FuseV1Options.EnableEmbeddedAsarIntegrityValidation, FuseState.ENABLE],
+      [FuseV1Options.OnlyLoadAppFromAsar, FuseState.ENABLE],
+    ];
+for (const [fuse, state] of expectedFuses) {
   assert(
     fuses[fuse] === state,
     `Unexpected Electron fuse: ${FuseV1Options[fuse]}`,
