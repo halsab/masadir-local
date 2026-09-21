@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readdir, readFile, realpath, stat } from 'node:fs/promises';
+import { readdir, readFile, readlink, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 
 export const targets = {
@@ -81,11 +81,9 @@ async function allFiles(root, prefix = '') {
     withFileTypes: true,
   })) {
     const relative = path.posix.join(prefix, entry.name);
-    assert(
-      !entry.isSymbolicLink(),
-      `Runtime symlink is not permitted: ${relative}`,
-    );
-    if (entry.isDirectory()) result.push(...(await allFiles(root, relative)));
+    if (entry.isSymbolicLink()) result.push(relative);
+    else if (entry.isDirectory())
+      result.push(...(await allFiles(root, relative)));
     else {
       assert(entry.isFile(), `Unsupported runtime entry: ${relative}`);
       result.push(relative);
@@ -113,6 +111,28 @@ export async function verifyRuntime(
     version(manifest.recollVersion) &&
       version(manifest.indexCompatibilityVersion),
     'Recoll and index compatibility versions must be declared.',
+  );
+  assert(
+    manifest.indexCompatibilityVersion === 'recoll-index-1.20-1.44',
+    'Unexpected Recoll index compatibility range.',
+  );
+  assert(
+    manifest.sourceArtifact &&
+      /^https:\/\/[^\s]+$/u.test(manifest.sourceArtifact.url) &&
+      version(manifest.sourceArtifact.filename) &&
+      /^[0-9a-f]{64}$/u.test(manifest.sourceArtifact.sha256),
+    'Source artifact URL, filename and SHA-256 are required.',
+  );
+  assert(
+    Array.isArray(manifest.additionalArtifacts ?? []) &&
+      (manifest.additionalArtifacts ?? []).every(
+        (artifact) =>
+          artifact &&
+          /^https:\/\/[^\s]+$/u.test(artifact.url) &&
+          version(artifact.filename) &&
+          /^[0-9a-f]{64}$/u.test(artifact.sha256),
+      ),
+    'Additional source artifacts need URL, filename and SHA-256.',
   );
   assert(
     safePath(manifest.recollindexExecutable) &&
@@ -152,6 +172,15 @@ export async function verifyRuntime(
       !Array.isArray(manifest.checksums) &&
       Object.keys(manifest.checksums).length === manifest.requiredFiles.length,
     'Provide SHA-256 for every required file.',
+  );
+  assert(
+    manifest.symlinks &&
+      typeof manifest.symlinks === 'object' &&
+      !Array.isArray(manifest.symlinks) &&
+      Object.entries(manifest.symlinks).every(
+        ([link, destination]) => safePath(link) && safePath(destination),
+      ),
+    'Runtime symlinks must be declared with relative destinations.',
   );
   assert(
     Array.isArray(manifest.licenses) && manifest.licenses.length > 0,
@@ -221,6 +250,19 @@ export async function verifyRuntime(
       );
     }
   }
+  for (const [relative, destination] of Object.entries(manifest.symlinks)) {
+    const linkPath = path.join(root, relative);
+    assert(
+      (await readlink(linkPath)) === destination,
+      `Runtime symlink differs: ${relative}`,
+    );
+    assert(
+      (await realpath(linkPath)).startsWith(
+        `${await realpath(root)}${path.sep}`,
+      ),
+      `Runtime symlink escapes its root: ${relative}`,
+    );
+  }
   if (target === 'darwin-arm64') {
     for (const executable of [
       manifest.recollindexExecutable,
@@ -232,7 +274,11 @@ export async function verifyRuntime(
       );
     }
   }
-  const allowed = new Set(['runtime-manifest.json', ...manifest.requiredFiles]);
+  const allowed = new Set([
+    'runtime-manifest.json',
+    ...manifest.requiredFiles,
+    ...Object.keys(manifest.symlinks),
+  ]);
   if (allowTemplate) allowed.add('runtime-manifest.template.json');
   for (const file of await allFiles(root)) {
     assert(allowed.has(file), `Undeclared runtime file: ${file}`);

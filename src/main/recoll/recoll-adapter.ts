@@ -79,6 +79,7 @@ const createRuntimeEnvironment = (
   env.PATH = [
     path.dirname(runtime.recollindexExecutable),
     ...runtime.helperDirectories,
+    ...(process.platform === 'darwin' ? ['/usr/bin', '/bin'] : []),
   ].join(path.delimiter);
   return env;
 };
@@ -217,7 +218,7 @@ export class RecollAdapter {
     try {
       const version = await this.runProcess({
         executable: runtime.recollindexExecutable,
-        args: ['-V'],
+        args: ['-h'],
         cwd: runtime.root,
         env: createRuntimeEnvironment(runtime),
         timeoutMs: VERSION_TIMEOUT_MS,

@@ -1,11 +1,11 @@
 import type { ForgeConfig } from '@electron-forge/shared-types';
 import { MakerDMG } from '@electron-forge/maker-dmg';
-import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { WebpackPlugin } from '@electron-forge/plugin-webpack';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { copyFile, readFile, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -15,13 +15,18 @@ import electronJson from 'electron/package.json';
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
 
-const target = `${process.platform}-${process.arch}`;
+const target =
+  process.env.MASADIR_PACKAGE_TARGET ?? `${process.platform}-${process.arch}`;
 const macIdentity = process.env.MASADIR_MAC_SIGN_IDENTITY;
 const notaryProfile = process.env.MASADIR_NOTARY_KEYCHAIN_PROFILE;
 const windowsCertificate = process.env.MASADIR_WINDOWS_CERTIFICATE_FILE;
 const windowsCertificatePassword =
   process.env.MASADIR_WINDOWS_CERTIFICATE_PASSWORD;
 const electronVersion = electronJson.version;
+const electronZipDir = process.env.MASADIR_ELECTRON_ZIP_DIR;
+const electronZip = electronZipDir
+  ? path.join(electronZipDir, `electron-v${electronVersion}-${target}.zip`)
+  : null;
 
 const buildTimestamp = (): string => {
   const epoch = process.env.SOURCE_DATE_EPOCH;
@@ -41,6 +46,7 @@ if (windowsCertificate && !windowsCertificatePassword) {
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    ...(electronZip && existsSync(electronZip) ? { electronZipDir } : {}),
     appBundleId: 'io.github.halsab.masadir.desktop',
     executableName: 'Masadir',
     extendInfo: { LSMinimumSystemVersion: '13.0' },
@@ -61,7 +67,7 @@ const config: ForgeConfig = {
         const resources = path.join(
           buildPath,
           ...(platform === 'darwin'
-            ? ['Contents', 'Resources']
+            ? [`${packageJson.productName}.app`, 'Contents', 'Resources']
             : ['resources']),
         );
         const runtimeRoot = path.join(resources, `${platform}-${arch}`);
@@ -117,19 +123,7 @@ const config: ForgeConfig = {
       : {}),
   },
   rebuildConfig: {},
-  makers: [
-    new MakerDMG({}),
-    new MakerSquirrel({
-      noMsi: true,
-      setupExe: 'Masadir-Setup.exe',
-      ...(windowsCertificate
-        ? {
-            certificateFile: windowsCertificate,
-            certificatePassword: windowsCertificatePassword,
-          }
-        : {}),
-    }),
-  ],
+  makers: [new MakerDMG({})],
   hooks: {
     prePackage: async (_forgeConfig, platform, arch) => {
       if (
@@ -137,12 +131,16 @@ const config: ForgeConfig = {
         !['darwin-arm64', 'win32-x64'].includes(target)
       ) {
         throw new Error(
-          `Build on the matching supported host for ${platform}-${arch}.`,
+          `Unsupported package target ${platform}-${arch}; set MASADIR_PACKAGE_TARGET for a cross-build.`,
         );
       }
       execFileSync(
         process.execPath,
-        [path.join(__dirname, 'scripts', 'verify-runtime.mjs'), target],
+        [
+          path.join(__dirname, 'scripts', 'verify-runtime.mjs'),
+          target,
+          ...(target === 'win32-x64' ? ['--static-only'] : []),
+        ],
         {
           cwd: __dirname,
           stdio: 'inherit',

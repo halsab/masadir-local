@@ -21,3 +21,8 @@ Thumbs.db
 *.crt
 *.key
 *.pem
+
+# Local Recoll payloads; manifests and license texts remain tracked.
+assets/runtime/darwin-arm64/recoll.app/
+assets/runtime/darwin-arm64/python/
+assets/runtime/win32-x64/Recoll/

@@ -2,13 +2,41 @@
   "schemaVersion": 1,
   "platform": "darwin",
   "arch": "arm64",
-  "recollVersion": null,
-  "recollindexExecutable": "bin/recollindex",
-  "recollqExecutable": "bin/recollq",
-  "helperDirectories": ["helpers"],
-  "requiredFiles": ["bin/recollindex", "bin/recollq"],
-  "indexCompatibilityVersion": null,
-  "helperVersions": {},
+  "recollVersion": "1.43.6",
+  "sourceArtifact": {
+    "url": "https://recoll.org/downloads/macos/recoll-1.43.6-20251014-af2d6350.dmg",
+    "filename": "recoll-1.43.6-20251014-af2d6350.dmg",
+    "sha256": "92c00c2049808a6fa0447eb033f03885826d4b19411d13f02b6e0233939b91bd",
+    "signatureUrl": "https://recoll.org/downloads/macos/recoll-1.43.6-20251014-af2d6350.dmg.asc",
+    "signerFingerprint": "F8E3347256922A8AE767605B7808CE96D38B9201"
+  },
+  "additionalArtifacts": [
+    {
+      "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260901/cpython-3.11.16+20260901-aarch64-apple-darwin-install_only.tar.gz",
+      "filename": "cpython-3.11.16+20260901-aarch64-apple-darwin-install_only.tar.gz",
+      "sha256": "50424fa409e8ae84b82a3052522f64695b47dff2158b70bb7358e0ebd6c085c9"
+    }
+  ],
+  "recollindexExecutable": "recoll.app/Contents/MacOS/recollindex",
+  "recollqExecutable": "recoll.app/Contents/MacOS/recollq",
+  "helperDirectories": ["recoll.app/Contents/MacOS", "python/bin"],
+  "requiredFiles": [],
+  "indexCompatibilityVersion": "recoll-index-1.20-1.44",
+  "helperVersions": {
+    "antiword": "0.37",
+    "Poppler": "24.04.0",
+    "Xapian": "1.4.29",
+    "Qt": "6.7.3",
+    "Python": "3.11.16"
+  },
   "checksums": {},
-  "licenses": []
+  "symlinks": {},
+  "licenses": [
+    { "name": "Recoll", "version": "1.43.6", "source": "https://recoll.org/recoll-1.43.6.tar.gz", "path": "licenses/GPL-2.0.txt" },
+    { "name": "antiword", "version": "0.37", "source": "https://framagit.org/medoc92/recoll-antiword", "path": "licenses/GPL-2.0.txt" },
+    { "name": "Poppler", "version": "24.04.0", "source": "https://poppler.freedesktop.org/", "path": "licenses/GPL-2.0.txt" },
+    { "name": "Xapian", "version": "1.4.29", "source": "https://xapian.org/", "path": "licenses/GPL-2.0.txt" },
+    { "name": "Qt", "version": "6.7.3", "source": "https://code.qt.io/cgit/qt/qtbase.git/tag/?h=v6.7.3", "path": "licenses/Qt-LGPL-3.0.txt" },
+    { "name": "Python", "version": "3.11.16", "source": "https://github.com/astral-sh/python-build-standalone/releases/tag/20260901", "path": "licenses/Python-3.11.16.txt" }
+  ]
 }

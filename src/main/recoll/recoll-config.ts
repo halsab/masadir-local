@@ -8,28 +8,24 @@ export interface RecollConfigInput {
   runtimeTempDirectory: string;
 }
 
-const quoteRecollValue = (value: string): string => {
+const validateRecollValue = (value: string): string => {
   if (value.includes('\0') || value.includes('\r') || value.includes('\n')) {
     throw new Error('Recoll config paths must not contain control characters.');
   }
-
-  return `"${value
-    .replace(/\\/gu, '\\\\')
-    .replace(/"/gu, '\\"')
-    .replace(/\$/gu, '\\$')}"`;
+  return value;
 };
 
 export const createRecollConfig = (input: RecollConfigInput): string => {
   const helperPath = input.helperDirectories.join(path.delimiter);
   return [
-    `topdirs = ${quoteRecollValue(path.resolve(input.libraryRoot))}`,
-    `dbdir = ${quoteRecollValue(path.resolve(input.indexDirectory))}`,
+    `topdirs = "${validateRecollValue(path.resolve(input.libraryRoot)).replace(/"/gu, '\\"')}"`,
+    `dbdir = ${validateRecollValue(path.resolve(input.indexDirectory))}`,
     'followLinks = 0',
     'onlyNames = *.pdf *.PDF *.doc *.DOC *.docx *.DOCX',
     'indexallfilenames = 0',
     'skippedNames+=.masadir-import-*',
-    `recollhelperpath = ${quoteRecollValue(helperPath)}`,
-    `idxrundir = ${quoteRecollValue(path.resolve(input.runtimeTempDirectory))}`,
+    `recollhelperpath = ${validateRecollValue(helperPath)}`,
+    `idxrundir = ${validateRecollValue(path.resolve(input.runtimeTempDirectory))}`,
     '',
   ].join('\n');
 };

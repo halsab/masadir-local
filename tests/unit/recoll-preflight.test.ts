@@ -70,7 +70,7 @@ describe('RecollAdapter preflight', () => {
     };
     const runner: ProcessRunnerPort = {
       run: async (options) => {
-        expect(options.args).toEqual(['-V']);
+        expect(options.args).toEqual(['-h']);
         return {
           exitCode: 0,
           stdout: 'Recoll 1.40.2',

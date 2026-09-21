@@ -29,14 +29,14 @@ describe('Recoll config', () => {
     });
 
     expect(config).toContain(
-      'topdirs = "/library/كتب \\"quoted\\" \\$cash"',
+      'topdirs = "/library/كتب \\"quoted\\" $cash"',
     );
-    expect(config).toContain('dbdir = "/app/index"');
+    expect(config).toContain('dbdir = /app/index');
     expect(config).toContain('followLinks = 0');
     expect(config).toContain('onlyNames = *.pdf *.PDF *.doc *.DOC *.docx *.DOCX');
     expect(config).toContain('indexallfilenames = 0');
     expect(config).toContain('skippedNames+=.masadir-import-*');
-    expect(config).toContain('idxrundir = "/app/runtime temp"');
+    expect(config).toContain('idxrundir = /app/runtime temp');
   });
 
   it('does not replace an unchanged config file', async () => {
