@@ -117,7 +117,15 @@ const config: ForgeConfig = {
         })().then(() => callback(), callback);
       },
     ],
-    ...(macIdentity ? { osxSign: { identity: macIdentity } } : {}),
+    osxSign: macIdentity
+      ? { identity: macIdentity }
+      : {
+          identity: '-',
+          identityValidation: false,
+          strictVerify: false,
+          ignore: 'Contents/Resources/darwin-arm64/',
+          optionsForFile: () => ({ timestamp: 'none' }),
+        },
     ...(notaryProfile
       ? { osxNotarize: { keychainProfile: notaryProfile } }
       : {}),
