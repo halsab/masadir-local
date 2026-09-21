@@ -49,7 +49,7 @@ describe('RuntimeResolver', () => {
     );
   });
 
-  it('uses resourcesPath as the packaged runtime and rejects other targets', () => {
+  it('uses the target within packaged resources and rejects other targets', () => {
     const packaged = new RuntimeResolver({
       appPath: '/ignored',
       isPackaged: true,
@@ -57,7 +57,7 @@ describe('RuntimeResolver', () => {
       platform: 'win32',
       arch: 'x64',
     });
-    expect(packaged.getRuntimeRoot()).toBe(path.resolve('/app/resources'));
+    expect(packaged.getRuntimeRoot()).toBe(path.resolve('/app/resources/win32-x64'));
 
     const unsupported = new RuntimeResolver({
       appPath: '/app',

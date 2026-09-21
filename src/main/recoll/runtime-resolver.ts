@@ -54,7 +54,7 @@ export class RuntimeResolver {
 
   getRuntimeRoot(): string {
     if (this.options.isPackaged) {
-      return path.resolve(this.options.resourcesPath);
+      return path.resolve(this.options.resourcesPath, this.getTarget());
     }
     return path.resolve(
       this.options.appPath,

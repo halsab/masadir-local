@@ -31,6 +31,10 @@ if (started) {
   app.quit();
 }
 
+if (process.platform === 'win32') {
+  app.setAppUserModelId('io.github.halsab.masadir.desktop');
+}
+
 app
   .whenReady()
   .then(async () => {
