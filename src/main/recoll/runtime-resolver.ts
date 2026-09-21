@@ -70,6 +70,12 @@ export class RuntimeResolver {
     const manifestPath = path.join(root, 'runtime-manifest.json');
     const serialized = await readFile(manifestPath, 'utf8');
     const manifest = parseRuntimeManifest(JSON.parse(serialized) as unknown);
+    if (manifest.platform !== undefined && manifest.platform !== (this.options.platform ?? process.platform)) {
+      throw new Error('Runtime manifest platform does not match the host.');
+    }
+    if (manifest.arch !== undefined && manifest.arch !== (this.options.arch ?? process.arch)) {
+      throw new Error('Runtime manifest architecture does not match the host.');
+    }
 
     return {
       target,

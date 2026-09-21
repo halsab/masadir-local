@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "platform": "darwin",
+  "arch": "arm64",
+  "recollVersion": null,
+  "recollindexExecutable": "bin/recollindex",
+  "recollqExecutable": "bin/recollq",
+  "helperDirectories": ["helpers"],
+  "requiredFiles": ["bin/recollindex", "bin/recollq"],
+  "indexCompatibilityVersion": null,
+  "helperVersions": {},
+  "checksums": {},
+  "licenses": []
+}

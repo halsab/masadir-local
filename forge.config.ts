@@ -28,7 +28,12 @@ const config: ForgeConfig = {
     asar: true,
     appBundleId: 'io.github.halsab.masadir.desktop',
     executableName: 'Masadir',
-    extraResource: [path.join(__dirname, 'assets', 'runtime', target)],
+    extraResource: [
+      path.join(__dirname, 'assets', 'runtime', target),
+      path.join(__dirname, 'THIRD_PARTY_NOTICES.md'),
+      path.join(__dirname, 'node_modules', 'electron', 'dist', 'LICENSE'),
+      path.join(__dirname, 'node_modules', 'electron', 'dist', 'LICENSES.chromium.html'),
+    ],
     ignore: [/[/\\]assets[/\\]runtime(?:[/\\]|$)/u],
     ...(macIdentity ? { osxSign: { identity: macIdentity } } : {}),
     ...(notaryProfile
