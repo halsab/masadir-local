@@ -12,7 +12,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it, type Mock, vi } from 'vitest';
 
 import { DocumentService } from '../../src/main/document/document-service';
-import { AppError, ErrorCode } from '../../src/shared/contracts';
+import { ErrorCode } from '../../src/shared/contracts';
 import type { StoredBook } from '../../src/main/library/library-types';
 
 const temporaryDirectories: string[] = [];
